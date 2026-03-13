@@ -2827,6 +2827,13 @@ async function confirmRangeBooking() {
 // ONBOARDING — First-run wizard
 // ==========================================
 async function checkFirstRun() {
+  // Mode démo : forcer le wizard via ?setup dans l'URL
+  if (new URLSearchParams(location.search).has('setup')) {
+    document.getElementById('lock-screen').classList.add('hidden');
+    document.getElementById('onboarding-overlay').classList.remove('hidden');
+    showOnboardingStep(1);
+    return true;
+  }
   try {
     const [configDoc, usersSnap] = await Promise.all([
       db.collection('config').doc('access').get(),
@@ -2924,7 +2931,9 @@ window.addEventListener('appinstalled', () => {
 });
 function triggerPwaInstall() {
   if (!deferredInstallPrompt) return;
-  deferredInstallPrompt.prompt();
+  deferredInstallPrompt.prompt().catch(() => {
+    showToast('Installez via le menu ⋮ de votre navigateur');
+  });
   deferredInstallPrompt.userChoice.then(() => {
     deferredInstallPrompt = null;
     document.getElementById('pwa-install-btn')?.classList.add('hidden');
@@ -2936,8 +2945,21 @@ function dismissIosInstall() {
 }
 // iOS: show install overlay 3s after first visit if not already in standalone mode
 const _isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+// Auto-dismiss si déjà installé (ouvert en standalone depuis l'icône)
+if (window.navigator.standalone) {
+  localStorage.setItem('ios_install_dismissed', '1');
+}
 if (_isIos && !window.navigator.standalone && !localStorage.getItem('ios_install_dismissed')) {
-  setTimeout(() => document.getElementById('ios-install-overlay')?.classList.remove('hidden'), 3000);
+  setTimeout(() => {
+    const overlay = document.getElementById('ios-install-overlay');
+    if (overlay) {
+      overlay.classList.remove('hidden');
+      // Fermer en tapant le backdrop
+      overlay.addEventListener('click', function(e) {
+        if (e.target === this) dismissIosInstall();
+      }, { once: true });
+    }
+  }, 3000);
 }
 
 // ==========================================
@@ -3075,6 +3097,7 @@ checkFirstRun().then(isNew => {
     <div class="ios-step"><div class="ios-step-num">1</div>Appuie sur <strong>Partager</strong> ⎙ en bas de Safari</div>
     <div class="ios-step"><div class="ios-step-num">2</div>Sélectionne <strong>« Sur l'écran d'accueil »</strong></div>
     <div class="ios-step"><div class="ios-step-num">3</div>Appuie sur <strong>Ajouter</strong></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:20px" onclick="dismissIosInstall()">C'est fait, l'app est installée ✓</button>
   </div>
 </div>
 </body>
