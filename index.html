@@ -1078,16 +1078,9 @@
     <button class="bm-close" onclick="closeBookingModal()">×</button>
   </div>
   <div class="bm-body" id="bm-body">
-    <!-- Section 1: Dates -->
-    <div class="bm-section">
-      <div class="bm-section-title">Dates</div>
-      <div class="bm-section-subtitle" id="bm-dates-hint">Sélectionnez votre date de départ</div>
-      <div id="bm-calendar-container"></div>
-    </div>
-    <!-- Section 2: Horaires -->
+    <!-- Section 1: Horaires (visible dès l'ouverture) -->
     <div class="bm-section">
       <div class="bm-section-title">Horaires</div>
-      <div class="bm-section-subtitle">Heure de prise et de retour</div>
       <div class="bm-time-row">
         <div class="bm-time-block">
           <div class="bm-time-label">Prise</div>
@@ -1099,16 +1092,21 @@
         </div>
       </div>
     </div>
-    <!-- Section 3: Destination -->
-    <div class="bm-section" style="padding-bottom:32px">
-      <div class="bm-section-title">Destination</div>
-      <div class="bm-section-subtitle">Où allez-vous ? (depuis Paris)</div>
+    <!-- Section 2: Destination (visible dès l'ouverture) -->
+    <div class="bm-section">
+      <div class="bm-section-title">Destination <span style="font-size:13px;font-weight:400;color:var(--text-light)">(optionnel)</span></div>
       <div class="bm-dest-input-wrap">
         <input class="bm-dest-input" type="text" id="bm-dest-input" placeholder="Rechercher une ville..." oninput="filterDestSuggestions(this.value)" autocomplete="off">
       </div>
       <div class="bm-dest-suggestions" id="bm-dest-suggestions"></div>
       <div class="bm-dest-list" id="bm-dest-list"></div>
       <button class="bm-add-step" id="bm-add-step-btn" onclick="showDestInput()" style="display:none">+ Ajouter une étape</button>
+    </div>
+    <!-- Section 3: Dates (calendrier, scroll vers le bas) -->
+    <div class="bm-section" style="padding-bottom:24px">
+      <div class="bm-section-title">Dates</div>
+      <div class="bm-section-subtitle" id="bm-dates-hint">Sélectionnez votre date de départ</div>
+      <div id="bm-calendar-container"></div>
     </div>
   </div>
   <div class="bm-footer">
@@ -2477,11 +2475,13 @@ function closeBookingModal() {
 
 function renderBmCalendar() {
   const container = document.getElementById('bm-calendar-container');
+  const body = document.getElementById('bm-body');
   if (!container) return;
+  const scrollTop = body ? body.scrollTop : 0;
   const today = new Date(); today.setHours(0,0,0,0);
   let html = '';
 
-  for (let m = 0; m < 12; m++) {
+  for (let m = 0; m < 4; m++) {
     const d = new Date(today.getFullYear(), today.getMonth() + m, 1);
     const year = d.getFullYear(); const month = d.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -2528,6 +2528,7 @@ function renderBmCalendar() {
     html += `</div></div>`;
   }
   container.innerHTML = html;
+  if (body) body.scrollTop = scrollTop;
 }
 
 function computeAvailBands(year, month, daysInMonth) {
@@ -2637,7 +2638,7 @@ function updateBookingRecap() {
     if (totalKm > 0) parts.push(`${totalKm} km`);
     subEl.textContent = parts.join(' · ');
   }
-  if (confirmBtn) confirmBtn.disabled = !(bm.startDate && bm.destinations.length > 0);
+  if (confirmBtn) confirmBtn.disabled = !bm.startDate;
 }
 
 async function confirmRangeBooking() {
