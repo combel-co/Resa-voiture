@@ -114,10 +114,3 @@ function getDateRange(startStr, endStr) {
   return dates;
 }
 
-// ==========================================
-// SCROLL LISTENER (resource tabs compact)
-// ==========================================
-window.addEventListener('scroll', () => {
-  const tabs = document.getElementById('resource-tabs');
-  if (tabs) tabs.classList.toggle('compact', window.scrollY > 50);
-}, { passive: true });
