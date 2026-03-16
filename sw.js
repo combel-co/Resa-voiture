@@ -49,7 +49,8 @@ self.addEventListener('fetch', event => {
         .catch(() => caches.match(event.request))
     );
   } else {
-    // Cache first for fonts and other static assets
+    // Cache first for fonts and other static assets (GET only)
+    if (event.request.method !== 'GET') return;
     event.respondWith(
       caches.match(event.request).then(cached => {
         return cached || fetch(event.request).then(response => {
