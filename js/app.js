@@ -28,11 +28,11 @@ window.addEventListener('resize', function () {
 // Mouse/keyboard: snap at threshold
 // ==========================================
 (function () {
-  const FULL_FONT   = 32;  // px — must match CSS
-  const FULL_HEIGHT = 40;  // px — must match CSS
-  const FULL_MARGIN = 3;   // px (margin-bottom) — must match CSS
-  const FULL_PAD    = 12;  // px (tabs padding-top) — must match CSS
-  const RANGE       = 55;  // px of scroll to go full→compact
+  const FULL_FONT   = 40;  // px — must match CSS
+  const FULL_HEIGHT = 48;  // px — must match CSS
+  const FULL_MARGIN = 6;   // px (margin-bottom) — must match CSS
+  const FULL_PAD    = 14;  // px (tabs padding-top) — must match CSS
+  const RANGE       = 68;  // px of scroll to go full→compact
 
   let _touching = false;
   let _compact  = false;
