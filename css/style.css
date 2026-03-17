@@ -22,6 +22,7 @@
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
+    overflow-x: hidden;  /* prevent horizontal scroll (full-bleed tabs / badges) */
     -webkit-font-smoothing: antialiased;
   }
 
@@ -920,6 +921,7 @@
     header { padding: 16px 18px; }
     main { padding: 0 14px 100px; }
     .resource-tabs { margin-left: -14px; margin-right: -14px; }
+    .resource-tab-icon { font-size: 36px; height: 44px; line-height: 44px; }
     :root { --header-h: 77px; }  /* mobile: padding 16+16 + content 44 + border 1 */
     .month-title { font-size: 22px; }
     .active-car-badge { max-width: 170px; font-size: 11px; padding: 5px 10px; }
@@ -954,53 +956,58 @@
   /* ---- RESOURCE TABS (Airbnb-style) ---- */
   .resource-tabs {
     display: flex;
-    padding: 12px 0 0;
+    padding: 14px 0 0;
     position: sticky; top: var(--header-h); z-index: 100;
     background: white;
-    /* Full-bleed: break out of main's 20px padding */
     margin-left: -20px; margin-right: -20px;
+    border-bottom: 1px solid var(--border);
     transition: padding-top 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
   }
 
   .resource-tab {
     flex: 1; min-width: 0;
     display: flex; flex-direction: column; align-items: center;
-    gap: 0; cursor: pointer; padding-bottom: 12px;
-    border-bottom: 2.5px solid transparent;
-    transition: opacity 0.15s; opacity: 0.45;
-    position: relative; overflow: visible;
+    cursor: pointer; position: relative;
   }
-  .resource-tab.active { opacity: 1; border-bottom-color: var(--text); }
-  .resource-tab:hover:not(.placeholder) { opacity: 0.75; }
+  .resource-tab:hover:not(.placeholder):not(.active) .resource-tab-label { color: #555; }
 
   .resource-tab-icon {
-    font-size: 32px; line-height: 40px;
-    height: 40px; display: block; text-align: center;
-    margin-bottom: 3px;
+    font-size: 40px; line-height: 48px;
+    height: 48px; display: block; text-align: center;
+    margin-bottom: 6px;
     transition: height 0.25s ease, opacity 0.25s ease,
                 margin-bottom 0.25s ease, font-size 0.2s ease;
   }
+
+  /* Label: thin border acts as per-tab indicator (width = text width, Airbnb-style) */
+  .resource-tab-label {
+    font-size: 13px; font-weight: 600; color: #888;
+    display: inline-block; white-space: nowrap;
+    padding-bottom: 10px; margin-bottom: -1px;  /* overlap container border */
+    border-bottom: 3px solid transparent;
+  }
+  .resource-tab.active .resource-tab-label {
+    color: var(--text); font-weight: 700;
+    border-bottom-color: var(--text);
+  }
+
   /* ---- COMPACT STATE (on scroll) ---- */
   .resource-tabs.compact { padding-top: 0; }
   .resource-tabs.compact .resource-tab-icon {
     height: 0; opacity: 0; margin-bottom: 0; font-size: 0;
   }
-  .resource-tabs.compact .resource-tab { padding-bottom: 10px; }
 
-  .resource-tab-label {
-    font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap;
-  }
+  .resource-tab.placeholder { pointer-events: none; }
+  .resource-tab.placeholder .resource-tab-label { color: #bbb; }
 
-  .resource-tab.placeholder {
-    pointer-events: none; opacity: 0.3;
-  }
+  /* Badge — anchored to icon center, never overflows screen */
   .resource-tab-badge {
-    position: absolute; top: 2px; right: 6px;
-    background: #e0e0e0; color: #666;
-    font-size: 8px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.3px; padding: 2px 5px; border-radius: 999px;
-    white-space: nowrap;
+    position: absolute; top: 0; left: 50%;
+    transform: translateX(8px);
+    background: #3a3a3a; color: #fff;
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.3px; padding: 3px 7px; border-radius: 999px;
+    white-space: nowrap; pointer-events: none;
   }
 
   /* ---- STAY / HOUSE MODULE ---- */
