@@ -490,7 +490,7 @@ async function showResourceAccessSheet(resourceId) {
   }
 
   if (!pending.length && !accepted.length) {
-    html = '<div style="color:var(--text-light);font-size:13px">Aucun membre invité pour l'instant.</div>';
+    html = '<div style="color:var(--text-light);font-size:13px">Aucun membre invité pour l\'instant.</div>';
   }
 
   pendingEl.innerHTML = html;
@@ -835,7 +835,7 @@ async function handleResourceJoinCode(code) {
     if (!existing.empty) {
       const status = existing.docs[0].data().status;
       if (status === 'accepted') { showToast('Tu as déjà accès à cette ressource'); return; }
-      if (status === 'pending') { showToast('Ta demande est déjà en attente d'approbation'); return; }
+      if (status === 'pending') { showToast('Ta demande est déjà en attente d\'approbation'); return; }
     }
 
     await db.collection('resource_access').add({
@@ -844,6 +844,6 @@ async function handleResourceJoinCode(code) {
       invited_at: firebase.firestore.FieldValue.serverTimestamp(),
       accepted_at: null
     });
-    showToast('Demande envoyée — en attente d'approbation par l'admin');
+    showToast('Demande envoy\u00e9e \u2014 en attente d\'approbation par l\'admin');
   } catch(e) { console.error(e); showToast('Erreur — réessayez'); }
 }
