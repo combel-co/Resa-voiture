@@ -369,12 +369,13 @@
     border-radius: 44px 44px 0 0;
     box-shadow: 0 -8px 40px rgba(0,0,0,0.10);
     display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
-    padding: 16px 10px 32px; z-index: 120;
+    /* Réduit : plus compact, safe-area seulement pour encoche iPhone */
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px)); z-index: 120;
   }
   .bottom-nav button {
-    border: none; background: transparent; border-radius: 16px; padding: 14px 6px;
+    border: none; background: transparent; border-radius: 16px; padding: 7px 6px;
     font-size: 12px; color: var(--text-light); font-weight: 600; cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
     transition: color 0.15s;
   }
   .bottom-nav button::before {
