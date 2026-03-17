@@ -15,11 +15,15 @@ let unsubscribeFuelReports = null;
 let pendingFuelPromptBookingId = null;
 let suPendingFamilyId = null;
 
-// Keep --header-h in sync on resize / orientation change
+// Keep --header-h in sync on orientation change (debounced — avoid iOS scroll jitter)
+var _resizeTimer;
 window.addEventListener('resize', function () {
-  var h = document.getElementById('app-header');
-  if (h && h.offsetHeight > 0)
-    document.documentElement.style.setProperty('--header-h', h.offsetHeight + 'px');
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(function () {
+    var h = document.getElementById('app-header');
+    if (h && h.offsetHeight > 0)
+      document.documentElement.style.setProperty('--header-h', h.offsetHeight + 'px');
+  }, 250);
 }, { passive: true });
 
 // ==========================================
