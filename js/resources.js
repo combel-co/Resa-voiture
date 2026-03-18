@@ -12,7 +12,7 @@ async function loadResources() {
     let snap = await familyRef().collection('resources').orderBy('name').get();
 
     if (snap.empty) {
-      // Migrate cars → resources
+      // Migrate cars → resources (collection entière vide)
       const carsSnap = await familyRef().collection('cars').get();
       if (!carsSnap.empty) {
         const batch = db.batch();
@@ -27,6 +27,30 @@ async function loadResources() {
 
     let allResources = [];
     snap.forEach(doc => allResources.push({ id: doc.id, ...doc.data() }));
+
+    // Migrate cars → resources fields (cas où resource existe mais sans données car/voiture)
+    const bareCarResources = allResources.filter(r =>
+      r.type === 'car' && !r.plaque && !r.assurance && !r.observations
+    );
+    if (bareCarResources.length > 0) {
+      const carsSnap = await familyRef().collection('cars').get();
+      if (!carsSnap.empty) {
+        const carsById = {};
+        carsSnap.forEach(doc => { carsById[doc.id] = doc.data(); });
+        const batch = db.batch();
+        let migrated = false;
+        for (const res of bareCarResources) {
+          const carData = carsById[res.id];
+          if (carData && (carData.plaque || carData.assurance || carData.fuelLevel != null)) {
+            const ref = familyRef().collection('resources').doc(res.id);
+            batch.set(ref, { ...carData, type: 'car' }, { merge: true });
+            Object.assign(res, carData, { type: 'car' });
+            migrated = true;
+          }
+        }
+        if (migrated) await batch.commit();
+      }
+    }
 
     if (allResources.length === 0) {
       const ref = await familyRef().collection('resources').add({
