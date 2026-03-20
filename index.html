@@ -3,1031 +3,105 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FamCar — Réservation voiture familiale</title>
-<meta name="description" content="Réservation de la voiture familiale — simple, rapide, gratuit.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+<title>FamResa — Ressources familiales partagées</title>
+<meta name="description" content="Gérez vos ressources familiales — voitures, maisons — simplement, ensemble.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
+<link rel="manifest" href="manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<style>
-  :root {
-    --bg: #ffffff;
-    --text: #1a1a1a;
-    --text-light: #888888;
-    --border: #e8e8e8;
-    --accent: #2563eb;
-    --accent-light: #eff4ff;
-    --danger: #ef4444;
-    --danger-light: #fef2f2;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
-    --shadow-md: 0 4px 20px rgba(0,0,0,0.06);
-    --shadow-lg: 0 12px 40px rgba(0,0,0,0.1);
-    --xp-color: #f59e0b;
-    --streak-color: #ef6c00;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    font-family: 'DM Sans', -apple-system, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  /* ---- HEADER ---- */
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px 28px;
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    background: rgba(255,255,255,0.92);
-    backdrop-filter: blur(16px);
-    z-index: 100;
-  }
-
-  .logo {
-    font-family: 'DM Sans', sans-serif;
-    font-weight: 700;
-    font-size: 22px;
-    letter-spacing: -0.5px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .logo-icon {
-    width: 32px; height: 32px;
-    background: var(--text); border-radius: 9px;
-    display: flex; align-items: center; justify-content: center;
-    color: white; font-size: 16px;
-  }
-
-  .user-pill {
-    display: flex; align-items: center; gap: 10px;
-    padding: 6px 14px 6px 6px; border-radius: 100px;
-    border: 1px solid var(--border); cursor: pointer;
-    transition: all 0.2s; background: white;
-    font-size: 14px; font-weight: 500;
-  }
-  .user-pill:hover { border-color: #ccc; box-shadow: var(--shadow-sm); }
-
-  .user-pill .avatar {
-    width: 30px; height: 30px; border-radius: 50%;
-    background: var(--accent); color: white;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 600; overflow: hidden;
-  }
-  .user-pill .avatar img { width: 100%; height: 100%; object-fit: cover; }
-
-  /* ---- MAIN ---- */
-  main { max-width: 520px; margin: 0 auto; padding: 32px 20px 100px; }
-
-  /* ---- MONTH NAV ---- */
-  .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; gap: 10px; }
-
-  .month-center { flex: 1; text-align: center; min-width: 0; }
-
-  .month-title {
-    font-family: 'DM Sans', sans-serif; font-size: 26px;
-    font-weight: 500; letter-spacing: -0.5px; text-transform: capitalize;
-  }
-
-  .active-car-badge {
-    margin: 7px auto 0;
-    border: 1px solid var(--border);
-    background: #fff;
-    border-radius: 999px;
-    padding: 6px 12px;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text);
-    max-width: 220px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    cursor: pointer;
-  }
-  .active-car-badge:disabled { opacity: 0.85; cursor: default; }
-
-  .month-btn {
-    width: 40px; height: 40px; border-radius: 50%;
-    border: 1px solid var(--border); background: white;
-    cursor: pointer; display: flex; align-items: center;
-    justify-content: center; font-size: 18px;
-    transition: all 0.15s; color: var(--text);
-  }
-  .month-btn:hover { background: #f5f5f5; }
-  .month-btn.today-btn {
-    width: auto;
-    border-radius: 999px;
-    padding: 0 12px;
-    font-size: 13px;
-    font-weight: 600;
-  }
-
-
-  /* ---- CALENDAR GRID ---- */
-  .cal-header {
-    display: grid; grid-template-columns: repeat(7, 1fr);
-    text-align: center; font-size: 12px; font-weight: 500;
-    color: var(--text-light); text-transform: uppercase;
-    letter-spacing: 0.5px; margin-bottom: 8px; padding: 0 2px;
-  }
-
-  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-
-  /* FIXED HEIGHT — no aspect-ratio */
-  .cal-day {
-    height: 56px;
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding-top: 8px;
-    padding-bottom: 20px;
-    font-size: 15px;
-    font-weight: 400;
-    cursor: pointer;
-    transition: all 0.15s;
-    position: relative;
-    border: 2px solid transparent;
-    overflow: hidden;
-  }
-
-  .cal-day:hover:not(.empty):not(.past) { background: #f7f7f7; }
-  .cal-day.empty { cursor: default; }
-  .cal-day.today { font-weight: 600; border-color: var(--text); }
-  .cal-day.past { color: #ccc; cursor: default; }
-
-  .cal-day.booked { background: var(--accent-light); border-color: var(--accent); cursor: pointer; }
-  .cal-day.mine { background: var(--accent); color: white; border-color: var(--accent); }
-
-  /* AVATAR — position absolute, never changes cell size */
-  .cal-day .booking-avatar {
-    position: absolute;
-    bottom: 3px;
-    width: 18px; height: 18px;
-    min-width: 18px; max-width: 18px;
-    min-height: 18px; max-height: 18px;
-    border-radius: 50%;
-    background: var(--accent);
-    color: white;
-    font-size: 7px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center;
-    overflow: hidden;
-  }
-
-  .cal-day .booking-avatar img {
-    width: 100%; height: 100%;
-    object-fit: cover; display: block;
-  }
-
-  .cal-day.mine .booking-avatar { background: rgba(255,255,255,0.35); }
-
-  .day-num {
-    line-height: 1;
-    position: relative;
-    z-index: 2;
-  }
-
-  .cal-day.weekend { background: #fafafa; }
-  .cal-day.weekend.booked { background: var(--accent-light); }
-  .cal-day.weekend.mine { background: var(--accent); }
-  .cal-day.past.mine { cursor: pointer; opacity: 0.65; }
-
-  /* ---- MODAL / BOTTOM SHEET ---- */
-  .overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.3);
-    z-index: 200; opacity: 0; visibility: hidden; transition: all 0.25s;
-  }
-  .overlay.open { opacity: 1; visibility: visible; }
-
-  .sheet {
-    position: fixed; bottom: 0; left: 0; right: 0;
-    background: white; border-radius: 20px 20px 0 0;
-    padding: 28px 24px 40px; z-index: 201;
-    transform: translateY(100%);
-    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-    max-width: 520px; margin: 0 auto;
-    max-height: 85vh; overflow-y: auto;
-  }
-  .overlay.open .sheet { transform: translateY(0); }
-
-  .sheet-handle { width: 36px; height: 4px; background: #ddd; border-radius: 4px; margin: 0 auto 20px; }
-
-  .sheet-date {
-    font-family: 'DM Sans', sans-serif; font-size: 22px;
-    font-weight: 500; margin-bottom: 6px; text-transform: capitalize;
-  }
-
-  .sheet-status { font-size: 14px; color: var(--text-light); margin-bottom: 24px; }
-
-  .sheet-status .booked-by {
-    display: flex; align-items: center; gap: 10px;
-    margin-top: 12px; padding: 12px; background: #f8f8f8; border-radius: 12px;
-  }
-
-  .sheet-status .booked-by .avatar-lg {
-    width: 40px; height: 40px; border-radius: 50%;
-    background: var(--accent); color: white;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 15px; font-weight: 600; overflow: hidden; flex-shrink: 0;
-  }
-  .sheet-status .booked-by .avatar-lg img { width: 100%; height: 100%; object-fit: cover; }
-
-  .sheet-status .booked-by .info { font-size: 15px; color: var(--text); font-weight: 500; }
-  .sheet-status .booked-by .info small { display: block; font-weight: 400; color: var(--text-light); font-size: 13px; }
-
-  .btn {
-    width: 100%; padding: 16px; border: none; border-radius: 12px;
-    font-size: 16px; font-weight: 600; font-family: 'DM Sans', sans-serif;
-    cursor: pointer; transition: all 0.15s;
-  }
-  .btn-primary { background: var(--text); color: white; }
-  .btn-primary:hover { background: #333; }
-  .btn-danger { background: var(--danger-light); color: var(--danger); }
-  .btn-danger:hover { background: #fee2e2; }
-  .btn-outline { background: transparent; color: var(--text); border: 2px solid var(--border); }
-  .btn-outline:hover { background: var(--surface); }
-  .btn + .btn { margin-top: 10px; }
-
-  /* ---- LOGIN / SIGNUP SHEET ---- */
-  .login-sheet { text-align: center; }
-  .login-sheet h2 { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
-  .login-sheet { animation: step-slide-in 0.2s ease; }
-  @keyframes step-slide-in {
-    from { transform: translateX(16px); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-  }
-  .login-sheet p { color: var(--text-light); font-size: 14px; margin-bottom: 28px; }
-
-  .input-group { margin-bottom: 14px; text-align: left; }
-  .input-group label { display: block; font-size: 13px; font-weight: 500; color: var(--text-light); margin-bottom: 6px; }
-  .input-group input, .input-group select {
-    width: 100%; padding: 14px 16px; border: 1px solid var(--border);
-    border-radius: 12px; font-size: 16px; font-family: 'DM Sans', sans-serif;
-    outline: none; transition: border 0.15s; background: white;
-  }
-  .input-group input:focus, .input-group select:focus { border-color: var(--accent); }
-
-  .photo-upload { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; margin-top: 4px; }
-
-  .photo-preview {
-    width: 56px; height: 56px; border-radius: 50%; background: #f0f0f0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px; color: #bbb; overflow: hidden; flex-shrink: 0;
-    border: 2px dashed #ddd; cursor: pointer; transition: all 0.15s;
-  }
-  .photo-preview:hover { border-color: var(--accent); }
-  .photo-preview img { width: 100%; height: 100%; object-fit: cover; }
-  .photo-preview.has-photo { border-style: solid; border-color: var(--accent); }
-
-  .photo-label { font-size: 14px; color: var(--text-light); cursor: pointer; }
-  .photo-label:hover { color: var(--accent); }
-  #photo-input { display: none; }
-
-
-  /* ---- KPI ---- */
-  .kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    margin-bottom: 22px;
-  }
-  .kpi-card {
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 16px 14px;
-    background: #fff;
-  }
-  .kpi-icon { font-size: 22px; margin-bottom: 6px; display: block; }
-  .kpi-value {
-    font-size: 38px;
-    font-weight: 700;
-    letter-spacing: -2px;
-    line-height: 1;
-    margin-bottom: 4px;
-    display: block;
-  }
-  .kpi-label {
-    font-size: 11px;
-    color: var(--text-light);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-  }
-  .kpi-sub {
-    font-size: 11px;
-    color: var(--text-light);
-    margin-top: 2px;
-  }
-
-  .card {
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 14px;
-    background: #fff;
-    box-shadow: var(--shadow-sm);
-    margin-bottom: 12px;
-  }
-  .card-title { font-size: 13px; color: var(--text-light); margin-bottom: 6px; }
-  .card-value { font-size: 18px; font-weight: 600; }
-
-  .status-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-  .status-pill { padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: #f5f5f5; }
-  .status-pill.ok { background: #ecfdf3; color: #047857; }
-  .status-pill.warn { background: #fff7ed; color: #c2410c; }
-
-  .mini-list { display: flex; flex-direction: column; gap: 8px; }
-  .mini-item {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 12px; border-radius: 10px; background: #f8f8f8; font-size: 13px;
-  }
-  .mini-item strong { font-size: 14px; }
-
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
-
-  .bottom-nav {
-    position: fixed; left: 50%; transform: translateX(-50%);
-    bottom: 0; width: 100%; max-width: 580px;
-    background: #ffffff;
-    border: 1.5px solid var(--border);
-    border-bottom: none;
-    border-radius: 44px 44px 0 0;
-    box-shadow: 0 -8px 40px rgba(0,0,0,0.10);
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
-    padding: 16px 10px 32px; z-index: 120;
-  }
-  .bottom-nav button {
-    border: none; background: transparent; border-radius: 16px; padding: 14px 6px;
-    font-size: 12px; color: var(--text-light); font-weight: 600; cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-    transition: color 0.15s;
-  }
-  .bottom-nav button::before {
-    content: attr(data-icon); font-size: 20px; line-height: 1;
-  }
-  .bottom-nav button.active { background: var(--accent-light); color: var(--accent); }
-
-  .calendar-hint {
-    margin: -6px 0 10px;
-    text-align: center;
-    color: var(--text-light);
-    font-size: 12px;
-  }
-
-  .profile-row {
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:12px;
-    margin:20px 0 28px;
-    max-width:100%;
-  }
-  .profile-avatar {
-    width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;
-    display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;overflow:hidden;
-    flex-shrink:0;
-  }
-  .profile-avatar img { width:100%; height:100%; object-fit:cover; }
-  .profile-meta { text-align:left; min-width:0; }
-  .profile-meta .name { font-size:18px; font-weight:600; line-height:1.2; }
-  .profile-meta .email { font-size:14px; color:var(--text-light); overflow-wrap:anywhere; }
-
-  /* ---- LEGEND ---- */
-  .legend { display: flex; gap: 20px; justify-content: center; margin-top: 24px; font-size: 13px; color: var(--text-light); }
-  .legend span { display: flex; align-items: center; gap: 6px; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
-
-  /* ---- TOAST ---- */
-  .toast {
-    position: fixed; bottom: 30px; left: 50%;
-    transform: translateX(-50%) translateY(80px);
-    background: var(--text); color: white; padding: 14px 24px;
-    border-radius: 14px; font-size: 15px; font-weight: 500;
-    z-index: 300; transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-    box-shadow: var(--shadow-lg); white-space: nowrap;
-  }
-  .toast.show { transform: translateX(-50%) translateY(0); }
-
-
-
-  .pin-input { display: flex; gap: 12px; justify-content: center; margin-bottom: 28px; }
-
-  .pin-input input {
-    width: 52px; height: 60px; text-align: center;
-    font-size: 24px; font-weight: 600; font-family: 'DM Sans', sans-serif;
-    border: 2px solid var(--border); border-radius: 14px;
-    outline: none; transition: border 0.15s; background: #fafafa;
-    -moz-appearance: textfield;
-  }
-  .pin-input input::-webkit-outer-spin-button,
-  .pin-input input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-  .pin-input input:focus { border-color: var(--text); background: white; }
-  .pin-input input.error { border-color: var(--danger); animation: shake 0.4s ease; }
-
-  @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    20%, 60% { transform: translateX(-6px); }
-    40%, 80% { transform: translateX(6px); }
-  }
-
-  .lock-error { color: var(--danger); font-size: 14px; margin-top: -16px; margin-bottom: 16px; min-height: 20px; }
-
-
-  /* ---- LOADING ---- */
-  .loading {
-    display: flex; align-items: center; justify-content: center;
-    padding: 60px; color: var(--text-light); font-size: 15px;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .spinner {
-    width: 20px; height: 20px; border: 2px solid var(--border);
-    border-top-color: var(--text); border-radius: 50%;
-    animation: spin 0.6s linear infinite; margin-right: 10px;
-  }
-
-  /* ---- GAMIFICATION ---- */
-  .xp-hero-card {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-    border-radius: 20px; padding: 20px; color: white; margin-bottom: 14px;
-  }
-  .xp-hero-top { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-  .xp-avatar {
-    width: 48px; height: 48px; border-radius: 50%;
-    background: rgba(255,255,255,0.2);
-    display: flex; align-items: center; justify-content: center;
-    overflow: hidden; flex-shrink: 0;
-    font-size: 16px; font-weight: 700; color: white;
-  }
-  .xp-info { flex: 1; min-width: 0; }
-  .xp-name { font-size: 17px; font-weight: 600; }
-  .xp-level-badge { font-size: 12px; opacity: 0.8; margin-top: 2px; }
-  .xp-streak { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; white-space: nowrap; }
-  .xp-bar-label {
-    display: flex; justify-content: space-between;
-    font-size: 12px; opacity: 0.8; margin-bottom: 6px;
-  }
-  .xp-bar-track {
-    background: rgba(255,255,255,0.25); border-radius: 999px;
-    height: 8px; overflow: hidden;
-  }
-  .xp-bar-fill {
-    height: 100%; background: var(--xp-color); border-radius: 999px;
-    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    min-width: 4px;
-  }
-  .car-status-inline {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 13px; color: var(--text-light);
-    margin-bottom: 14px; padding: 0 2px;
-  }
-  .dot-ok { width: 8px; height: 8px; border-radius: 50%; background: #10b981; flex-shrink: 0; }
-  .dot-warn { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); flex-shrink: 0; }
-  .quick-stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-  .quick-stat {
-    border: 1px solid var(--border); border-radius: 14px;
-    padding: 14px; text-align: center; background: #fff;
-  }
-  .quick-stat-value {
-    font-size: 26px; font-weight: 700; letter-spacing: -1px;
-    font-family: 'DM Sans', sans-serif;
-  }
-  .quick-stat-label { font-size: 12px; color: var(--text-light); margin-top: 4px; }
-
-  /* Leaderboard Podium */
-  .lb-header { text-align: center; margin-bottom: 20px; }
-  .lb-title { font-family: 'DM Sans', sans-serif; font-size: 24px; font-weight: 500; }
-  .podium {
-    display: flex; align-items: flex-end; justify-content: center;
-    gap: 8px; margin-bottom: 24px; padding: 0 4px;
-  }
-  .podium-slot {
-    flex: 1; display: flex; flex-direction: column; align-items: center;
-    gap: 6px; max-width: 110px;
-  }
-  .podium-avatar {
-    width: 52px; height: 52px; border-radius: 50%;
-    background: var(--accent); color: white; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px; font-weight: 700; overflow: hidden;
-    border: 3px solid #e5e7eb;
-  }
-  .podium-slot.rank-1 .podium-avatar { width: 60px; height: 60px; border-color: #f59e0b; }
-  .podium-slot.rank-2 .podium-avatar { border-color: #94a3b8; }
-  .podium-slot.rank-3 .podium-avatar { border-color: #b45309; }
-  .podium-name { font-size: 12px; font-weight: 600; text-align: center; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .podium-score { font-size: 11px; color: var(--text-light); }
-  .podium-bar {
-    width: 100%; border-radius: 10px 10px 0 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px; padding: 8px 0;
-  }
-  .podium-bar.rank-1 { background: linear-gradient(180deg, #fef9c3 0%, #fde68a 100%); }
-  .podium-bar.rank-2 { background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%); }
-  .podium-bar.rank-3 { background: linear-gradient(180deg, #fff7ed 0%, #fed7aa 100%); }
-  .podium-rank { font-size: 11px; font-weight: 700; color: var(--text-light); letter-spacing: 0.5px; }
-  .lb-rest { display: flex; flex-direction: column; gap: 8px; }
-  .lb-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 14px; border: 1px solid var(--border);
-    border-radius: 12px; background: white;
-  }
-  .lb-row.is-me { background: var(--accent-light); border-color: var(--accent); }
-  .lb-rank-num { font-size: 16px; font-weight: 700; color: var(--text-light); width: 24px; text-align: center; }
-  .lb-avatar-sm {
-    width: 36px; height: 36px; border-radius: 50%;
-    background: var(--accent); color: white; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 600; overflow: hidden;
-  }
-  .lb-info { flex: 1; min-width: 0; }
-  .lb-info-name { font-size: 14px; font-weight: 600; }
-  .lb-info-sub { font-size: 12px; color: var(--text-light); }
-  .lb-pts { font-size: 15px; font-weight: 700; color: var(--accent); }
-
-  /* Celebration overlay */
-  .celebration {
-    position: fixed; inset: 0; z-index: 400;
-    background: rgba(37, 99, 235, 0.95);
-    display: flex; align-items: center; justify-content: center;
-    flex-direction: column;
-  }
-  .celebration-inner { text-align: center; color: white; z-index: 1; padding: 24px; }
-  .celebration-check {
-    width: 72px; height: 72px; border-radius: 50%;
-    background: rgba(255,255,255,0.15); border: 2.5px solid rgba(255,255,255,0.6);
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto; font-size: 32px; font-weight: 700; color: white;
-    animation: cel-bounce 0.5s cubic-bezier(0.34,1.56,0.64,1);
-  }
-  .celebration-title {
-    font-family: 'DM Sans', sans-serif; font-size: 28px; font-weight: 700;
-    margin-top: 12px; letter-spacing: -0.5px;
-  }
-  .celebration-xp {
-    font-size: 24px; font-weight: 700; color: var(--xp-color);
-    margin-top: 8px;
-    animation: xp-pop 0.5s 0.25s cubic-bezier(0.34,1.56,0.64,1) both;
-  }
-  .celebration-sub { font-size: 15px; opacity: 0.85; margin-top: 6px; }
-  .confetti-container { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-  .confetti-piece {
-    position: absolute; top: -20px;
-    animation: confetti-fall linear forwards;
-  }
-  @keyframes cel-bounce {
-    0% { transform: scale(0) rotate(-10deg); opacity: 0; }
-    100% { transform: scale(1) rotate(0deg); opacity: 1; }
-  }
-  @keyframes xp-pop {
-    0% { transform: scale(0.5) translateY(16px); opacity: 0; }
-    100% { transform: scale(1) translateY(0); opacity: 1; }
-  }
-  @keyframes confetti-fall {
-    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-    100% { transform: translateY(110vh) rotate(540deg); opacity: 0; }
-  }
-
-  /* Fuel sheet */
-  .fuel-selector {
-    display: grid; grid-template-columns: repeat(5, 1fr);
-    gap: 8px; margin: 20px 0;
-  }
-  .fuel-btn {
-    display: flex; flex-direction: column; align-items: center;
-    gap: 6px; padding: 10px 4px; border-radius: 12px;
-    border: 2px solid var(--border); background: white;
-    cursor: pointer; transition: all 0.15s; font-family: 'DM Sans', sans-serif;
-  }
-  .fuel-btn:hover { border-color: var(--accent); background: var(--accent-light); }
-  .fuel-btn.selected { border-color: var(--accent); background: var(--accent); color: white; }
-  .fuel-bar-wrap {
-    width: 24px; height: 32px; background: #f0f0f0; border-radius: 4px;
-    overflow: hidden; display: flex; align-items: flex-end;
-  }
-  .fuel-bar-fill { width: 100%; border-radius: 4px; transition: height 0.2s; }
-  .fuel-label { font-size: 10px; font-weight: 600; }
-
-  /* ---- FUEL MINI BAR (booking sheet + dashboard) ---- */
-  .fuel-info-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); margin-bottom:14px; font-size:14px; color:var(--text-light); }
-  .fuel-mini-bar { display:flex; align-items:center; gap:6px; }
-  .fuel-mini-track { width:48px; height:8px; background:#f0f0f0; border-radius:999px; overflow:hidden; }
-  .fuel-mini-fill { height:100%; border-radius:999px; }
-
-  /* ---- BADGES ---- */
-  .badge-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
-  .badge-item { border-radius: 12px; padding: 12px 14px; }
-  .badge-item.earned { background: var(--primary); color: white; }
-  .badge-item.locked { border: 1.5px dashed #ccc; color: var(--text-light); background: #fafafa; }
-  .badge-item-label { font-weight: 700; font-size: 14px; }
-  .badge-item-desc { font-size: 12px; margin-top: 2px; opacity: 0.8; }
-  .profile-xp-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
-  .profile-xp-badge { background: var(--primary); color: white; border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 700; }
-  .profile-xp-num { font-size: 13px; color: var(--text-light); }
-
-  /* ---- CAR STATUS CARD ---- */
-  .car-status-card {
-    border: 1px solid var(--border); border-radius: 16px;
-    padding: 16px; margin-bottom: 14px;
-    background: white; box-shadow: var(--shadow-sm);
-  }
-  .car-status-header {
-    display: flex; align-items: center;
-    justify-content: space-between; margin-bottom: 12px;
-  }
-  .car-status-left { display: flex; align-items: center; gap: 8px; }
-  .car-status-label { font-size: 14px; font-weight: 600; color: var(--text); }
-  .car-info-btn {
-    font-size: 12px; font-weight: 600; color: var(--accent);
-    background: var(--accent-light); border: none; border-radius: 8px;
-    padding: 6px 12px; cursor: pointer; font-family: 'DM Sans', sans-serif;
-    white-space: nowrap; flex-shrink: 0;
-  }
-  .car-status-fuel {
-    display: flex; align-items: center; justify-content: space-between;
-    font-size: 13px; color: var(--text-light);
-  }
-
-  /* ---- RESERVE CTA ---- */
-  .reserve-cta {
-    border: 1px solid var(--border); border-radius: 16px;
-    padding: 16px; margin-bottom: 14px; background: white;
-  }
-  .reserve-cta-label { font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--text); }
-
-  .post-trip-card {
-    border: 1px solid #facc15; border-radius: 16px;
-    background: #fffbeb; padding: 14px; margin-bottom: 14px;
-  }
-  .post-trip-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
-  .post-trip-sub { font-size: 13px; color: #92400e; margin-bottom: 10px; }
-  .post-trip-meta { font-size: 12px; color: var(--text-light); margin-bottom: 12px; }
-
-  /* ---- HISTORY CARD ---- */
-  .history-card {
-    display: flex; border: 1px solid var(--border);
-    border-radius: 14px; overflow: hidden; margin-bottom: 10px; background: white;
-  }
-  .history-left {
-    flex: 1; padding: 14px; display: flex; flex-direction: column;
-    align-items: flex-start; gap: 5px;
-  }
-  .history-right {
-    flex: 1; padding: 14px; background: #fafafa; border-left: 1px solid var(--border);
-    display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
-  }
-  .history-avatar-sm {
-    width: 34px; height: 34px; border-radius: 50%;
-    background: var(--accent); color: white; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 600; overflow: hidden; margin-bottom: 4px;
-  }
-  .history-section-label {
-    font-size: 10px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.5px; color: var(--text-light);
-  }
-  .history-date-val { font-size: 13px; font-weight: 600; color: var(--text); }
-  .history-dest { font-size: 12px; color: var(--text-light); max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-  /* ---- SETTINGS TAB ---- */
-  .settings-section-title {
-    font-size: 11px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.6px; color: var(--text-light); margin: 18px 0 10px;
-  }
-  .improvement-plan-card {
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    background: #f8fafc;
-    padding: 14px;
-    margin-bottom: 12px;
-  }
-  .improvement-plan-card h3 { font-size: 14px; margin-bottom: 8px; }
-  .improvement-plan-card ul { padding-left: 18px; color: var(--text-light); font-size: 13px; line-height: 1.5; }
-
-  /* ===================================================
-     BOOKING MODAL — design Airbnb
-     =================================================== */
-  .booking-modal {
-    position: fixed; inset: 0; z-index: 250;
-    background: #f5f5f5;
-    transform: translateY(100%);
-    transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
-    display: flex; flex-direction: column; overflow: hidden;
-  }
-  .booking-modal.open { transform: translateY(0); }
-
-  /* Header */
-  .bm-header {
-    display: flex; align-items: center; justify-content: flex-end;
-    padding: 14px 16px; background: #f5f5f5; flex-shrink: 0;
-  }
-  .bm-close {
-    width: 36px; height: 36px; border-radius: 50%;
-    border: 1.5px solid #d0d0d0; background: white;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    font-size: 18px; color: var(--text); transition: all 0.15s;
-    font-family: 'DM Sans', sans-serif; font-weight: 600;
-  }
-  .bm-close:hover { background: #eee; }
-
-  /* Body — fond gris, cartes blanches */
-  .bm-body {
-    flex: 1; overflow-y: hidden; padding: 0 16px 16px;
-    display: flex; flex-direction: column; gap: 12px; min-height: 0;
-  }
-
-  /* Cartes */
-  .bm-section {
-    background: white; border-radius: 20px; padding: 24px 20px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-  }
-  .bm-section-title {
-    font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 16px; color: var(--text);
-  }
-  .bm-section-subtitle { font-size: 14px; color: var(--text-light); margin-bottom: 16px; margin-top: -10px; }
-
-  /* Destination — barre recherche Airbnb */
-  .bm-dest-search {
-    display: flex; align-items: center; gap: 12px;
-    background: #f5f5f5; border-radius: 14px; padding: 14px 16px; margin-bottom: 16px;
-    border: 1.5px solid transparent; transition: border-color 0.15s;
-  }
-  .bm-dest-search:focus-within { border-color: var(--text); background: white; }
-  .bm-dest-search-icon { font-size: 18px; flex-shrink: 0; }
-  .bm-dest-input {
-    flex: 1; border: none; outline: none; background: transparent;
-    font-size: 16px; font-family: 'DM Sans', sans-serif; color: var(--text);
-  }
-  .bm-dest-input::placeholder { color: #aaa; }
-  .bm-dest-suggestions { display: flex; flex-wrap: wrap; gap: 8px; }
-  .bm-dest-chip {
-    padding: 9px 16px; border-radius: 999px; border: 1.5px solid #e0e0e0;
-    font-size: 13px; font-weight: 500; cursor: pointer;
-    background: white; transition: all 0.15s; font-family: 'DM Sans', sans-serif; color: var(--text);
-  }
-  .bm-dest-chip:active { transform: scale(0.96); }
-  .bm-dest-chip.selected { background: var(--text); color: white; border-color: var(--text); }
-  .bm-dest-km { font-size: 13px; color: var(--text-light); margin-top: 10px; }
-
-  /* Calendrier Airbnb */
-  .bm-cal-top-header {
-    display: grid; grid-template-columns: repeat(7, 1fr);
-    text-align: center; font-size: 12px; font-weight: 500;
-    color: var(--text-light); margin-bottom: 4px;
-  }
-  .bm-month-block { margin-bottom: 12px; }
-  .bm-month-label {
-    font-size: 14px; font-weight: 700; text-transform: capitalize;
-    padding: 10px 0 8px; color: var(--text);
-  }
-  .bm-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
-
-  /* Bande disponibilité */
-  .bm-avail-band {
-    display: flex; align-items: center; gap: 6px;
-    margin-bottom: 14px; padding: 8px 12px;
-    background: #f0fdf4; border-radius: 10px;
-    font-size: 12px; color: #047857; font-weight: 500;
-  }
-
-  /* Jour */
-  .bm-day {
-    position: relative; height: 46px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; user-select: none; -webkit-user-select: none;
-  }
-  .bm-day.bm-empty { cursor: default; pointer-events: none; }
-  .bm-day.bm-past { opacity: 0.3; cursor: default; pointer-events: none; }
-  .bm-day.bm-booked { cursor: not-allowed; }
-  .bm-day-num {
-    width: 38px; height: 38px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 14px; font-weight: 400;
-    position: relative; z-index: 2;
-    transition: background 0.12s, color 0.12s;
-  }
-  .bm-day.bm-today .bm-day-num { font-weight: 800; }
-  .bm-day.bm-booked .bm-day-num { background: #f0f0f0; color: #bbb; }
-  .bm-day:not(.bm-empty):not(.bm-past):not(.bm-booked):hover .bm-day-num { background: #ebebeb; }
-
-  /* Avatar réservation */
-  .bm-booking-avatar {
-    position: absolute; bottom: 2px;
-    width: 14px; height: 14px; border-radius: 50%;
-    background: #aaa; color: white;
-    font-size: 6px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center;
-    overflow: hidden; z-index: 3;
-  }
-  .bm-booking-avatar img { width: 100%; height: 100%; object-fit: cover; }
-
-  /* Sélection de plage — style Airbnb (noir) */
-  .bm-day::before {
-    content: ''; position: absolute; inset: 4px 0; z-index: 1; pointer-events: none;
-  }
-  .bm-day--start::before { left: 50%; background: #f0f0f0; }
-  .bm-day--end::before { right: 50%; background: #f0f0f0; }
-  .bm-day--mid::before { background: #f0f0f0; }
-  .bm-day--start .bm-day-num,
-  .bm-day--end .bm-day-num { background: var(--text) !important; color: white !important; font-weight: 700; }
-  .bm-day--start.bm-day--end::before { display: none; }
-
-  /* Horaires */
-  .bm-time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .bm-time-block {
-    background: #f5f5f5; border-radius: 14px; padding: 14px 16px;
-    border: 1.5px solid transparent; transition: border-color 0.15s;
-  }
-  .bm-time-block:focus-within { border-color: var(--text); background: white; }
-  .bm-time-label {
-    font-size: 10px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.8px; color: var(--text-light); margin-bottom: 6px;
-  }
-  .bm-time-input {
-    font-size: 24px; font-weight: 700; font-family: 'DM Sans', sans-serif;
-    border: none; outline: none; padding: 0; width: 100%;
-    background: transparent; color: var(--text); letter-spacing: -0.5px;
-  }
-
-  /* ---- Wizard : step system ---- */
-  .bm-step .bm-section { display: block; }
-  .bm-step.completed .bm-section,
-  .bm-step.upcoming .bm-section { display: none; }
-  .bm-step .bm-card-mini { display: none; }
-  .bm-step.completed .bm-card-mini,
-  .bm-step.upcoming .bm-card-mini { display: flex; }
-  .bm-step.upcoming .bm-card-mini { opacity: 0.45; pointer-events: none; }
-  /* Completed/upcoming steps shrink to their mini card size */
-  .bm-step.completed, .bm-step.upcoming { flex-shrink: 0; }
-  /* Active step fills remaining space; section scrolls internally */
-  .bm-step.active { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-  .bm-step.active .bm-section { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-
-  /* Mini card */
-  .bm-card-mini {
-    background: white; border-radius: 16px; padding: 16px 20px;
-    border: 1px solid #e8e8e8; cursor: pointer; transition: background 0.15s;
-    align-items: center; justify-content: space-between;
-  }
-  .bm-card-mini:active { background: #f0f0f0; }
-  .bm-card-mini-label {
-    font-size: 11px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.5px; color: var(--text-light); margin-bottom: 3px;
-  }
-  .bm-card-mini-value { font-size: 15px; font-weight: 600; color: var(--text); }
-  .bm-card-mini-edit {
-    font-size: 13px; font-weight: 700; color: var(--text);
-    text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; flex-shrink: 0;
-  }
-
-  /* Footer Airbnb — Réinitialiser | Suivant/Réserver */
-  .bm-footer {
-    flex-shrink: 0; background: white;
-    border-top: 1px solid var(--border);
-    padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
-    display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  }
-  .bm-reset-btn {
-    font-size: 15px; font-weight: 600; color: var(--text);
-    background: none; border: none; cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    text-decoration: underline; text-underline-offset: 3px; padding: 8px 0;
-  }
-  .bm-next-btn {
-    padding: 16px 28px; background: var(--text); color: white;
-    border: none; border-radius: 14px; font-size: 16px; font-weight: 700;
-    font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.15s;
-    flex-shrink: 0;
-  }
-  .bm-next-btn:hover { background: #333; }
-  .bm-next-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-  /* ---- RESPONSIVE ---- */
-  @media (max-width: 480px) {
-    header { padding: 16px 18px; }
-    main { padding: 24px 14px 100px; }
-    .month-title { font-size: 22px; }
-    .active-car-badge { max-width: 170px; font-size: 11px; padding: 5px 10px; }
-    .month-btn.today-btn { padding: 0 10px; font-size: 12px; }
-    .cal-day { font-size: 13px; border-radius: 10px; height: 48px; padding-top: 7px; padding-bottom: 18px; }
-  }
-
-  /* ===== Onboarding Wizard ===== */
-  .ob-overlay {
-    position: fixed; inset: 0; z-index: 500; background: white;
-    display: flex; align-items: center; justify-content: center;
-    overflow-y: auto; padding: 20px;
-  }
-  .ob-overlay.hidden { display: none; }
-  .ob-step.hidden { display: none; }
-  .su-step.hidden { display: none; }
-  .ob-card { max-width: 400px; width: 100%; text-align: center; position: relative; }
-  .ob-emoji { font-size: 64px; margin-bottom: 16px; }
-  .ob-back {
-    position: absolute; top: 0; left: 0; background: #f0f0f0;
-    border: none; border-radius: 50%; width: 36px; height: 36px;
-    font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  }
-  .ob-dots { display: flex; gap: 6px; justify-content: center; margin: 12px 0 28px; }
-  .ob-dot { height: 8px; border-radius: 999px; background: var(--border); transition: all 0.3s; width: 8px; }
-  .ob-dot.active { background: var(--accent); width: 24px; }
-  .ob-fields { text-align: left; margin: 20px 0 24px; display: flex; flex-direction: column; gap: 14px; }
-  .ob-photo-row { display: flex; justify-content: center; margin: 8px 0; }
-  .ob-emoji-btn { font-size: 28px; background: var(--surface); border: 2px solid var(--border); border-radius: 12px; width: 56px; height: 56px; cursor: pointer; transition: all 0.15s; }
-  .ob-emoji-btn.active { border-color: var(--accent); background: rgba(99,102,241,0.08); }
-</style>
 </head>
 <body>
-<header id="app-header" style="display:none;"><div class="logo"><div class="logo-icon">🚗</div> FamCar</div><div class="user-pill" id="user-pill" onclick="showProfile()"><div class="avatar" id="header-avatar">?</div><span id="header-name">Se connecter</span></div></header>
-<main id="app-main" style="display:none;">
-  <section class="tab-panel active" id="tab-dashboard">
-    <!-- XP Hero Card -->
-    <article class="xp-hero-card" id="xp-hero-card">
-      <div class="xp-hero-top">
-        <div class="xp-avatar" id="xp-avatar"></div>
-        <div class="xp-info">
-          <div class="xp-name" id="xp-name">—</div>
-          <div class="xp-level-badge" id="xp-level-badge">Niveau 1 · Apprenti</div>
-        </div>
-        <div class="xp-streak" id="xp-streak">🔥 0</div>
-      </div>
-      <div class="xp-bar-label">
-        <span id="xp-current">0 XP</span>
-        <span id="xp-next">sur 100 XP</span>
-      </div>
-      <div class="xp-bar-track">
-        <div class="xp-bar-fill" id="xp-bar-fill" style="width:0%"></div>
-      </div>
-    </article>
 
-    <!-- Statut voiture card -->
-    <div class="car-status-card">
-      <div class="car-status-header">
-        <div class="car-status-left">
-          <span class="dot-ok" id="car-status-dot"></span>
-          <span class="car-status-label" id="car-status-text">Voiture disponible</span>
+<header id="app-header" style="display:none;">
+  <button class="family-pill" id="family-pill" onclick="toggleFamilyPicker()">
+    <span id="family-name-display">Famille</span>
+    <span class="family-chevron">▾</span>
+  </button>
+  <div class="user-pill" id="user-pill" onclick="showProfile()">
+    <div class="avatar" id="header-avatar">?</div>
+    <span id="header-name">Se connecter</span>
+  </div>
+</header>
+<div class="family-picker-dropdown" id="family-picker-dropdown"></div>
+
+<main id="app-main" style="display:none;">
+
+  <!-- Resource tabs (populated by renderResourceTabs()) -->
+  <div class="resource-tabs" id="resource-tabs"></div>
+
+  <section class="tab-panel active" id="tab-dashboard">
+    <!-- XP elements (cachés, maintenus pour la gamification/leaderboard) -->
+    <div style="display:none" aria-hidden="true">
+      <article id="xp-hero-card">
+        <div class="xp-hero-top">
+          <div id="xp-avatar"></div>
+          <div class="xp-info"><div id="xp-name"></div><div id="xp-level-badge"></div></div>
+          <div id="xp-streak"></div>
         </div>
-        <button class="car-info-btn" onclick="showCarInfo()">Info voiture</button>
+        <span id="xp-current"></span><span id="xp-next"></span>
+        <div class="xp-bar-track"><div class="xp-bar-fill" id="xp-bar-fill" style="width:0%"></div></div>
+      </article>
+    </div>
+
+    <!-- Carte voiture v2 (inline design) -->
+    <div class="ccv2-card" id="resource-main-card">
+      <div class="ccv2-top">
+        <div>
+          <div class="ccv2-name" id="resource-card-title">Voiture</div>
+          <div class="ccv2-model" id="resource-card-subtitle">—</div>
+        </div>
+        <div class="ccv2-badge available" id="availability-badge">
+          <div class="ccv2-dot" id="car-status-dot"></div>
+          <span id="car-status-text">Disponible</span>
+        </div>
       </div>
-      <div class="car-status-fuel">
-        <span>Réservoir</span>
-        <div id="car-fuel-display"></div>
+      <div class="ccv2-illustration"><span id="resource-card-emoji">🚗</span></div>
+      <div class="ccv2-grid" id="car-info-grid" onclick="showCarInfo()">
+        <div class="ccv2-cell" id="cell-plaque">
+          <div class="ccv2-label">Immatriculation</div>
+          <div class="ccv2-value" id="info-plaque">—</div>
+        </div>
+        <div class="ccv2-cell" id="cell-assurance">
+          <div class="ccv2-label">Assurance</div>
+          <div class="ccv2-value" id="info-assurance">—</div>
+        </div>
+        <div class="ccv2-cell" id="cell-ct">
+          <div class="ccv2-label">Contrôle technique</div>
+          <div class="ccv2-value" id="info-ct">—</div>
+        </div>
+        <div class="ccv2-cell" id="cell-km-odo">
+          <div class="ccv2-label">Kilométrage</div>
+          <div class="ccv2-value" id="info-km-odo">—</div>
+        </div>
+        <div class="ccv2-cell full" id="car-fuel-row">
+          <div class="ccv2-label">Réservoir</div>
+          <div id="car-fuel-display"></div>
+        </div>
       </div>
+      <div class="ccv2-reserve-wrap">
+        <button class="ccv2-btn-reserve" id="reserve-cta-btn" onclick="openBookingModal()">Réserver la voiture</button>
+      </div>
+      <div class="ccv2-next-slot" id="next-slot-text">Prochain créneau libre · Aujourd'hui</div>
     </div>
 
     <div id="post-trip-reminder"></div>
 
-    <!-- Quick Stats -->
-    <div class="quick-stats-row">
-      <div class="quick-stat">
-        <div class="quick-stat-value" id="qs-rides">0</div>
-        <div class="quick-stat-label">mes trajets ce mois</div>
-      </div>
-      <div class="quick-stat">
-        <div class="quick-stat-value" id="qs-rank">#—</div>
-        <div class="quick-stat-label">mon classement</div>
-      </div>
-    </div>
+    <!-- Prochaines réservations -->
+    <div class="ccv2-section-label" id="upcoming-label">Prochaines réservations</div>
+    <div id="upcoming-bookings" style="margin-bottom:24px"></div>
 
-    <!-- Reserve CTA -->
-    <div class="reserve-cta">
-      <div class="reserve-cta-label">Réserver la voiture</div>
-      <button class="btn btn-primary" style="width:100%" onclick="openBookingModal()">Réserver la voiture →</button>
+    <!-- Éléments KPI/stats masqués (compatibilité JS) -->
+    <div style="display:none" aria-hidden="true">
+      <span id="qs-rides"></span><span id="qs-rank"></span>
+      <span id="kpi-bookings"></span><span id="kpi-bookings-sub"></span>
+      <span id="kpi-occupancy"></span><span id="kpi-occupancy-sub"></span>
+      <article id="kpi-km-card"><span id="kpi-km"></span></article>
+      <article id="kpi-co2-card"><span id="kpi-co2"></span></article>
+      <span id="resource-card-plaque"></span>
+      <button id="car-info-btn" onclick="showCarInfo()"></button>
     </div>
-
-    <!-- KPI Grid -->
-    <section class="kpi-grid" aria-label="Indicateurs mensuels" style="margin-bottom:130px">
-      <article class="kpi-card">
-        <span class="kpi-value" id="kpi-bookings">0</span>
-        <div class="kpi-label">trajets ce mois</div>
-        <div class="kpi-sub" id="kpi-bookings-sub"></div>
-      </article>
-      <article class="kpi-card">
-        <span class="kpi-value" id="kpi-occupancy">0%</span>
-        <div class="kpi-label">occupation</div>
-        <div class="kpi-sub" id="kpi-occupancy-sub"></div>
-      </article>
-      <article class="kpi-card">
-        <span class="kpi-value" id="kpi-km">0</span>
-        <div class="kpi-label">kilomètres</div>
-      </article>
-      <article class="kpi-card">
-        <span class="kpi-value" id="kpi-co2">0</span>
-        <div class="kpi-label">kg CO₂</div>
-      </article>
-    </section>
   </section>
 
   <section class="tab-panel" id="tab-calendar">
@@ -1041,7 +115,7 @@
       <button class="month-btn today-btn" type="button" onclick="goToToday()">Aujourd'hui</button>
     </div>
 
-    <div class="calendar-hint">Planning de la voiture (lecture seule). Réservez depuis le Dashboard.</div>
+    <div class="calendar-hint">Planning (lecture seule). Réservez depuis le Dashboard.</div>
 
     <div class="cal-header">
       <div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div>
@@ -1067,25 +141,125 @@
   </section>
 
   <section class="tab-panel" id="tab-history" style="margin-bottom:130px">
-    <div class="settings-section-title">Inviter un membre</div>
-    <div class="car-status-card" style="margin-bottom:16px">
-      <p style="font-size:14px;color:var(--text-light);margin-bottom:12px">Partagez ce lien pour qu’un nouveau membre rejoigne votre famille.</p>
-      <div id="invite-link-display" style="font-size:13px;color:var(--accent);word-break:break-all;background:var(--accent-light);padding:10px 12px;border-radius:10px;margin-bottom:12px;min-height:36px"></div>
-      <button class="btn btn-primary" onclick="loadAndCopyInviteLink()" style="width:100%">Copier le lien d’invitation</button>
+    <div class="pf-page-header">
+      <div class="pf-page-title">Profil</div>
     </div>
-    <div class="settings-section-title" style="margin-top:8px">Historique des trajets</div>
-    <div id="history-full"></div>
+
+    <!-- Hero card -->
+    <div class="pf-hero-card">
+      <div class="pf-hero-top">
+        <div class="pf-hero-avatar" id="pf-avatar">?</div>
+        <div class="pf-hero-meta">
+          <div class="pf-hero-name" id="pf-name">—</div>
+          <div class="pf-hero-sub" id="pf-sub">—</div>
+        </div>
+        <button class="pf-edit-btn" onclick="showProfile()">Modifier</button>
+      </div>
+      <!-- Family pills -->
+      <div class="pf-family-pills">
+        <div class="pf-family-pill active">
+          <div class="pf-f-dot"></div>
+          <span id="pf-family-name">Famille</span>
+        </div>
+        <div class="pf-family-pill pf-add-pill" onclick="loadAndCopyInviteLink()">+ Rejoindre</div>
+      </div>
+      <!-- KPIs -->
+      <div class="pf-kpi-row">
+        <div class="pf-kpi-item">
+          <div class="pf-kpi-val" id="pf-kpi-rides">—</div>
+          <div class="pf-kpi-lbl">Mes trajets</div>
+        </div>
+        <div class="pf-kpi-item">
+          <div class="pf-kpi-val" id="pf-kpi-total">—</div>
+          <div class="pf-kpi-lbl">Total famille</div>
+        </div>
+        <div class="pf-kpi-item">
+          <div class="pf-kpi-val" id="pf-kpi-seniority">—</div>
+          <div class="pf-kpi-lbl">Ancienneté</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ressources partagées -->
+    <div class="pf-section-lbl">Ressources partagées</div>
+    <div class="pf-resources-grid" id="pf-resources-grid"></div>
+
+    <!-- Promo invite -->
+    <div class="pf-promo-card" onclick="loadAndCopyInviteLink()">
+      <div class="pf-promo-icon">🔗</div>
+      <div class="pf-promo-text">
+        <div class="pf-promo-title">Inviter une famille</div>
+        <div class="pf-promo-desc">Partagez le lien. Quand ils activent, vous gagnez des avantages.</div>
+      </div>
+      <div class="pf-promo-chevron">›</div>
+    </div>
+
+    <!-- Compte -->
+    <div class="pf-section-lbl">Compte</div>
+    <div class="pf-settings-group">
+      <div class="pf-settings-row" onclick="showProfile()">
+        <div class="pf-row-icon">👤</div>
+        <div class="pf-row-label">Paramètres du compte</div>
+        <div class="pf-row-chevron">›</div>
+      </div>
+      <div class="pf-settings-row">
+        <div class="pf-row-icon">🔔</div>
+        <div class="pf-row-label">Notifications</div>
+        <div class="pf-row-chevron">›</div>
+      </div>
+      <div class="pf-settings-row">
+        <div class="pf-row-icon">🔒</div>
+        <div class="pf-row-label">Code personnel</div>
+        <div class="pf-row-chevron">›</div>
+      </div>
+    </div>
+
+    <!-- Aide -->
+    <div class="pf-section-lbl">Aide</div>
+    <div class="pf-settings-group">
+      <div class="pf-settings-row">
+        <div class="pf-row-icon">💡</div>
+        <div class="pf-row-label">Proposer une amélioration</div>
+        <div class="pf-row-chevron">›</div>
+      </div>
+      <div class="pf-settings-row">
+        <div class="pf-row-icon">❓</div>
+        <div class="pf-row-label">Aide & FAQ</div>
+        <div class="pf-row-chevron">›</div>
+      </div>
+    </div>
+
+    <div class="pf-settings-group" style="margin-bottom:14px">
+      <div class="pf-settings-row pf-row-danger" onclick="logout()">
+        <div class="pf-row-icon" style="background:#fff1f2">🚪</div>
+        <div class="pf-row-label">Se déconnecter</div>
+      </div>
+    </div>
+
+    <!-- Compat JS (hidden) -->
+    <div style="display:none" aria-hidden="true">
+      <div id="history-full"></div>
+      <div id="invite-link-display"></div>
+    </div>
   </section>
 
-  <nav class="bottom-nav" aria-label="Navigation principale">
-    <button type="button" id="nav-dashboard" class="active" data-icon="🏠" onclick="switchTab('dashboard')">Dashboard</button>
-    <button type="button" id="nav-calendar" data-icon="📅" onclick="switchTab('calendar')">Planning</button>
-    <button type="button" id="nav-leaderboard" data-icon="🏆" onclick="switchTab('leaderboard')">Classement</button>
-    <button type="button" id="nav-history" data-icon="⚙️" onclick="switchTab('history')">Historique</button>
-  </nav>
 </main>
-<div class="overlay" id="overlay" onclick="closeSheet()"><div class="sheet" id="sheet" onclick="event.stopPropagation()"><div class="sheet-handle"></div><div id="sheet-content"></div></div></div>
+
+<nav class="bottom-nav" aria-label="Navigation principale">
+  <button type="button" id="nav-dashboard" class="active" data-icon="🏠" onclick="switchTab('dashboard')">Dashboard</button>
+  <button type="button" id="nav-calendar" data-icon="📅" onclick="switchTab('calendar')">Planning</button>
+  <button type="button" id="nav-leaderboard" data-icon="🏆" onclick="switchTab('leaderboard')">Classement</button>
+  <button type="button" id="nav-history" data-icon="◉" onclick="switchTab('history')">Profil</button>
+</nav>
+
+<div class="overlay" id="overlay" onclick="closeSheet()">
+  <div class="sheet" id="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div id="sheet-content"></div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
+
 <!-- ===== BOOKING MODAL (full-screen Airbnb) ===== -->
 <div class="booking-modal" id="booking-modal">
   <div class="bm-header">
@@ -1093,25 +267,35 @@
   </div>
   <div class="bm-body" id="bm-body">
 
-    <!-- STEP 1 — Destination -->
+    <!-- STEP 1 — Destination / Motif -->
     <div class="bm-step active" id="bm-step-destination">
       <!-- Mini (collapsed) -->
       <div class="bm-card-mini" onclick="goToStep('destination')">
         <div>
-          <div class="bm-card-mini-label">Destination</div>
+          <div class="bm-card-mini-label" id="bm-step1-mini-label">Destination</div>
           <div class="bm-card-mini-value" id="bm-mini-dest-val">Je suis flexible</div>
         </div>
         <div class="bm-card-mini-edit">Modifier</div>
       </div>
       <!-- Full (expanded) -->
-      <div class="bm-section">
-        <div class="bm-section-title">Où ?</div>
-        <div class="bm-dest-search">
-          <span class="bm-dest-search-icon">🔍</span>
-          <input class="bm-dest-input" type="text" id="bm-dest-input" placeholder="Rechercher une destination" oninput="filterDestSuggestions(this.value)" autocomplete="off">
+      <div class="bm-section" id="bm-step1-full">
+        <div class="bm-section-title" id="bm-step1-title">Où ?</div>
+        <!-- Car: destination search -->
+        <div id="bm-dest-section">
+          <div class="bm-dest-search">
+            <span class="bm-dest-search-icon">🔍</span>
+            <input class="bm-dest-input" type="text" id="bm-dest-input" placeholder="Rechercher une destination" oninput="filterDestSuggestions(this.value)" autocomplete="off">
+          </div>
+          <div class="bm-dest-suggestions" id="bm-dest-suggestions"></div>
+          <div class="bm-dest-km" id="bm-dest-km"></div>
         </div>
-        <div class="bm-dest-suggestions" id="bm-dest-suggestions"></div>
-        <div class="bm-dest-km" id="bm-dest-km"></div>
+        <!-- House: motif input -->
+        <div id="bm-motif-section" style="display:none">
+          <div class="input-group" style="margin-top:8px">
+            <label>Motif / Description <span style="color:var(--text-light);font-weight:400">(optionnel)</span></label>
+            <input type="text" id="bm-motif-input" placeholder="Ex: vacances d'été, week-end famille..." autocomplete="off">
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1136,7 +320,7 @@
       </div>
     </div>
 
-    <!-- STEP 3 — Horaires -->
+    <!-- STEP 3 — Horaires (car only) -->
     <div class="bm-step upcoming" id="bm-step-hours">
       <!-- Mini -->
       <div class="bm-card-mini" onclick="goToStep('hours')">
@@ -1178,1875 +362,13 @@
   </div>
   <div class="confetti-container" id="confetti-container"></div>
 </div>
-<script>
-// ==========================================
-// FIREBASE CONFIG
-// ==========================================
-const firebaseConfig = {
-  apiKey: "REDACTED_API_KEY",
-  authDomain: "REDACTED_PROJECT_ID.firebaseapp.com",
-  projectId: "REDACTED_PROJECT_ID",
-  storageBucket: "REDACTED_PROJECT_ID.firebasestorage.app",
-  messagingSenderId: "REDACTED_SENDER_ID",
-  appId: "REDACTED_APP_ID",
-  measurementId: "REDACTED_MEASUREMENT_ID"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
-function familyRef() {
-  if (!currentUser?.familyId) throw new Error('No familyId on currentUser');
-  return db.collection('families').doc(currentUser.familyId);
-}
-
-// ==========================================
-// STATE
-// ==========================================
-let currentUser = JSON.parse(localStorage.getItem('famcar_user') || 'null');
-let currentMonth = new Date().getMonth();
-let currentYear = new Date().getFullYear();
-let bookings = {};
-let cars = [];
-let selectedCar = null;
-let unsubscribe = null;
-let tempPhoto = null;
-let activeTab = 'dashboard';
-let fuelReportsByBooking = {};
-let unsubscribeFuelReports = null;
-let pendingFuelPromptBookingId = null;
-let suPendingFamilyId = null;
-
-
-// ==========================================
-// CARS
-// ==========================================
-async function loadCars() {
-  try {
-    const snap = await familyRef().collection('cars').orderBy('name').get();
-    cars = [];
-    snap.forEach(doc => cars.push({ id: doc.id, ...doc.data() }));
-    if (cars.length === 0) {
-      const ref = await familyRef().collection('cars').add({ name: 'Voiture familiale', emoji: '🚗' });
-      cars = [{ id: ref.id, name: 'Voiture familiale', emoji: '🚗' }];
-    }
-    selectedCar = cars[0].id;
-    renderCarSelector();
-    subscribeBookings();
-    subscribeFuelReports();
-  } catch (e) {
-    console.error('Firebase error:', e);
-    document.getElementById('cal-grid').innerHTML =
-      '<div class="loading" style="flex-direction:column;gap:8px;color:var(--danger)">⚠️ Connexion impossible<br><small style="color:var(--text-light)">Vérifiez votre connexion ou Firebase.</small></div>';
-  }
-}
-
-function renderCarSelector() {
-  const badge = document.getElementById('active-car-badge');
-  if (!badge) return;
-
-  if (cars.length === 0 || !selectedCar) {
-    badge.textContent = '🚗 Aucune voiture';
-    badge.disabled = true;
-    return;
-  }
-
-  const active = cars.find(c => c.id === selectedCar) || cars[0];
-  badge.textContent = `${active.emoji || '🚗'} ${active.name}`;
-  badge.disabled = cars.length <= 1;
-}
-
-function selectCar(id) { selectedCar = id; renderCarSelector(); subscribeBookings(); subscribeFuelReports(); }
-
-function cycleCar() {
-  if (cars.length <= 1) return;
-  const currentIndex = cars.findIndex(c => c.id === selectedCar);
-  const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % cars.length : 0;
-  selectCar(cars[nextIndex].id);
-  showToast(`Voiture active : ${cars[nextIndex].name}`);
-}
-
-// ==========================================
-// BOOKINGS (REAL-TIME)
-// ==========================================
-function subscribeBookings() {
-  if (unsubscribe) unsubscribe();
-  unsubscribe = familyRef().collection('bookings')
-    .where('carId', '==', selectedCar)
-    .onSnapshot(snap => {
-      bookings = {};
-      snap.forEach(doc => {
-        const d = { id: doc.id, ...doc.data() };
-        if (d.startDate && d.endDate) {
-          // Range booking: populate every day in range
-          let cur = new Date(d.startDate + 'T00:00:00');
-          const end = new Date(d.endDate + 'T00:00:00');
-          while (cur <= end) {
-            const ds = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
-            bookings[ds] = d;
-            cur.setDate(cur.getDate() + 1);
-          }
-        } else if (d.date) {
-          bookings[d.date] = d;
-        }
-      });
-      renderCalendar();
-      renderExperiencePanels();
-      if (document.getElementById('booking-modal')?.classList.contains('open')) renderBmCalendar();
-    });
-}
-
-
-function subscribeFuelReports() {
-  // fuelReports collection is deprecated — no-op
-  fuelReportsByBooking = {};
-}
-
-function switchTab(tab) {
-  activeTab = tab;
-  ['dashboard', 'calendar', 'leaderboard', 'history'].forEach(name => {
-    document.getElementById(`tab-${name}`)?.classList.toggle('active', name === tab);
-    document.getElementById(`nav-${name}`)?.classList.toggle('active', name === tab);
-  });
-  if (tab === 'leaderboard' || tab === 'history' || tab === 'dashboard') renderExperiencePanels();
-}
-
-function getMonthBookingEntries() {
-  const monthPrefix = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-`;
-  const seen = new Set();
-  const result = [];
-  Object.entries(bookings).forEach(([dateStr, b]) => {
-    if (dateStr.startsWith(monthPrefix) && b && !seen.has(b.id)) {
-      seen.add(b.id); result.push(b);
-    }
-  });
-  return result;
-}
-
-function getUniqueBookingsSorted() {
-  const seen = new Set();
-  const unique = [];
-  Object.values(bookings).forEach((b) => {
-    if (!b || !b.id || seen.has(b.id)) return;
-    seen.add(b.id);
-    unique.push(b);
-  });
-  return unique.sort((a, b) => ((b.startDate || b.date || '')).localeCompare(a.startDate || a.date || ''));
-}
-
-function getFuelReturnLevelForBooking(booking) {
-  if (!booking) return null;
-  if (booking.fuelReturnLevel !== undefined && booking.fuelReturnLevel !== null) return booking.fuelReturnLevel;
-  return fuelReportsByBooking[booking.id]?.fuelReturnLevel ?? null;
-}
-
-function formatBookingDateRange(booking) {
-  const start = booking.startDate || booking.date;
-  const end = booking.endDate || booking.date;
-  if (!start) return '—';
-  const sd = new Date(start + 'T00:00:00');
-  const ed = new Date(end + 'T00:00:00');
-  if (start === end) return sd.toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric' });
-  return `${sd.toLocaleDateString('fr-FR', { day:'numeric', month:'short' })} → ${ed.toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric' })}`;
-}
-
-function getPendingFuelBookingForCurrentUser() {
-  if (!currentUser) return null;
-  const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
-  const minePast = getUniqueBookingsSorted().filter(b => (b.userId === currentUser.id) && ((b.endDate || b.date || '') < todayStr));
-  return minePast.find(b => getFuelReturnLevelForBooking(b) === null) || null;
-}
-
-function renderPostTripReminder() {
-  const el = document.getElementById('post-trip-reminder');
-  if (!el) return;
-  const booking = getPendingFuelBookingForCurrentUser();
-  if (!booking) { el.innerHTML = ''; return; }
-  const destination = getBookingDestinationLabel(booking);
-  const km = estimateDistanceForBooking(booking);
-  el.innerHTML = `<div class="post-trip-card">
-    <div class="post-trip-title">Vous avez utilisé la voiture</div>
-    <div class="post-trip-sub">Résumé de votre dernière resa</div>
-    <div class="post-trip-meta">${formatBookingDateRange(booking)} · ${destination} · ${km} km</div>
-    <button class="btn btn-primary" type="button" onclick="openFuelReminder('${booking.id}')">Mettre à jour le réservoir rendu</button>
-  </div>`;
-}
-
-function openFuelReminder(bookingId) {
-  const booking = getUniqueBookingsSorted().find(b => b.id === bookingId);
-  if (!booking) return;
-  showTripReport(booking, formatBookingDateRange(booking));
-}
-
-function maybePromptPendingFuel() {
-  if (!currentUser || !selectedCar) return;
-  if (document.getElementById('overlay')?.classList.contains('open')) return;
-  const booking = getPendingFuelBookingForCurrentUser();
-  if (!booking) return;
-  if (pendingFuelPromptBookingId === booking.id) return;
-
-  const storageKey = `famcar_fuel_prompt_seen_${booking.id}`;
-  if (localStorage.getItem(storageKey) === '1') return;
-
-  pendingFuelPromptBookingId = booking.id;
-  localStorage.setItem(storageKey, '1');
-  setTimeout(() => {
-    if (document.getElementById('overlay')?.classList.contains('open')) return;
-    showTripReport(booking, formatBookingDateRange(booking));
-  }, 250);
-}
-
-function renderExperiencePanels() {
-  const monthEntries = getMonthBookingEntries();
-  const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
-  const todayBooking = bookings[todayStr];
-
-  // Car status card
-  const statusDot = document.getElementById('car-status-dot');
-  const statusText = document.getElementById('car-status-text');
-  const fuelDisplay = document.getElementById('car-fuel-display');
-  const activeCar = cars.find(c => c.id === selectedCar);
-  if (statusDot && statusText) {
-    if (todayBooking) {
-      statusDot.className = 'dot-warn';
-      statusText.textContent = `Utilisée par ${todayBooking.userName}${todayBooking.destination ? ' · ' + todayBooking.destination : ''}`;
-    } else {
-      statusDot.className = 'dot-ok';
-      statusText.textContent = 'Voiture disponible';
-    }
-  }
-  if (fuelDisplay) {
-    fuelDisplay.innerHTML = getFuelBar(activeCar?.fuelLevel ?? null);
-  }
-
-  // Points accumulator (with photo for podium avatars)
-  const points = {};
-  monthEntries.forEach(b => {
-    const key = b.userId || b.userName || 'inconnu';
-    const label = b.userName || 'Utilisateur';
-    if (!points[key]) points[key] = { label, score: 0, rides: 0, photo: b.photo || null };
-    const km = estimateDistanceForBooking(b);
-    points[key].score += 20 + Math.round(km / 25);
-    points[key].rides += 1;
-  });
-  const ranking = Object.values(points).sort((a,b)=>b.score-a.score);
-
-  // Quick stats (my rides this month + my rank)
-  const myMonthRides = monthEntries.filter(b => currentUser && b.userId === currentUser.id).length;
-  const myRank = ranking.findIndex(r => currentUser && r.label === currentUser.name) + 1;
-  const qsRides = document.getElementById('qs-rides');
-  const qsRank = document.getElementById('qs-rank');
-  if (qsRides) qsRides.textContent = String(myMonthRides);
-  if (qsRank) qsRank.textContent = myRank > 0 ? `#${myRank}` : '#—';
-
-  // XP hero card
-  renderXpHeroCard();
-
-  // Leaderboard podium
-  renderLeaderboard(ranking);
-
-  // History grouped by booking (no day-by-day duplicates)
-  const history = getUniqueBookingsSorted();
-  const historyEl = document.getElementById('history-full');
-  if (historyEl) {
-    if (!history.length) {
-      historyEl.innerHTML = '<div style="color:var(--text-light);font-size:14px;padding:16px 0">Aucun trajet enregistré.</div>';
-    } else {
-      historyEl.innerHTML = history.map(h => {
-        const av = h.photo ? `<img src="${h.photo}" alt="" style="width:100%;height:100%;object-fit:cover">` : getInitials(h.userName || 'C');
-        const dateFormatted = formatBookingDateRange(h);
-        const dest = getBookingDestinationLabel(h);
-        const km = estimateDistanceForBooking(h);
-        const fuelLevel = getFuelReturnLevelForBooking(h);
-        const fuelLeft = (fuelLevel !== undefined && fuelLevel !== null) ? getFuelBar(fuelLevel) : '<span style="color:#b45309;font-size:12px">Donnée manquante</span>';
-        return `<div class="history-card">
-          <div class="history-left">
-            <div class="history-avatar-sm">${av}</div>
-            <div class="history-section-label">Réservation</div>
-            <div class="history-date-val">${dateFormatted}</div>
-            <div class="history-dest">${dest}</div>
-          </div>
-          <div class="history-right">
-            <div class="history-section-label">Retour · réservoir</div>
-            <div style="margin-top:2px">${fuelLeft}</div>
-            <div class="history-dest" style="margin-top:4px">${km} km</div>
-          </div>
-        </div>`;
-      }).join('');
-    }
-  }
-
-  renderPostTripReminder();
-}
-
-// ==========================================
-// CALENDAR RENDER (fixed 6 rows)
-// ==========================================
-function renderCalendar() {
-  const grid = document.getElementById('cal-grid');
-  const titleEl = document.getElementById('month-title');
-  const date = new Date(currentYear, currentMonth, 1);
-  titleEl.textContent = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-
-  let firstDay = date.getDay() - 1;
-  if (firstDay < 0) firstDay = 6;
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const today = new Date(); today.setHours(0,0,0,0);
-
-  let html = '';
-
-  // Empty cells before first day
-  for (let i = 0; i < firstDay; i++) html += '<div class="cal-day empty"></div>';
-
-  // Day cells
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const cellDate = new Date(currentYear, currentMonth, d);
-    const dayOfWeek = cellDate.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const isToday = cellDate.getTime() === today.getTime();
-    const isPast = cellDate < today;
-    const booking = bookings[dateStr];
-    const isMine = booking && currentUser && booking.userId === currentUser.id;
-
-    let classes = ['cal-day'];
-    if (isWeekend) classes.push('weekend');
-    if (isToday) classes.push('today');
-    if (isPast) classes.push('past');
-    if (booking && isMine) classes.push('mine');
-    else if (booking) classes.push('booked');
-
-    let avatarHtml = '';
-    if (booking) {
-      if (booking.photo) {
-        avatarHtml = `<div class="booking-avatar"><img src="${booking.photo}" alt=""></div>`;
-      } else {
-        avatarHtml = `<div class="booking-avatar">${getInitials(booking.userName)}</div>`;
-      }
-    }
-
-    html += `<div class="${classes.join(' ')}" onclick="onDayClick('${dateStr}', ${isPast})">
-      <span class="day-num">${d}</span>
-      ${avatarHtml}
-    </div>`;
-  }
-
-  // Pad to 42 cells (6 rows) for consistent height
-  const totalCells = firstDay + daysInMonth;
-  for (let i = totalCells; i < 42; i++) html += '<div class="cal-day empty"></div>';
-
-  grid.innerHTML = html;
-  renderKpis(daysInMonth);
-  renderExperiencePanels();
-}
-
-function renderKpis(daysInMonth) {
-  const monthPrefix = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-`;
-  const monthDateKeys = Object.keys(bookings).filter(d => d.startsWith(monthPrefix));
-  const totalDaysBooked = monthDateKeys.length;
-  // Deduplicate for unique trips
-  const seen = new Set(); const uniqueBookings = [];
-  monthDateKeys.forEach(d => { const b = bookings[d]; if (b && !seen.has(b.id)) { seen.add(b.id); uniqueBookings.push(b); } });
-  const totalBookings = uniqueBookings.length;
-  const myDays = monthDateKeys.filter(d => currentUser && bookings[d]?.userId === currentUser.id).length;
-  const occupancy = daysInMonth ? Math.round((totalDaysBooked / daysInMonth) * 100) : 0;
-  const estimatedKm = uniqueBookings.reduce((sum, b) => sum + estimateDistanceForBooking(b), 0);
-  const co2KgPerKm = 0.12;
-  const estimatedCo2 = (estimatedKm * co2KgPerKm).toFixed(1);
-
-  document.getElementById('kpi-bookings').textContent = String(totalDaysBooked);
-  document.getElementById('kpi-bookings-sub').textContent = currentUser
-    ? `Dont ${myDays} jours pour ${currentUser.name}`
-    : 'Tous conducteurs';
-  document.getElementById('kpi-occupancy').textContent = `${occupancy}%`;
-  document.getElementById('kpi-occupancy-sub').textContent = `${totalDaysBooked} jour${totalDaysBooked > 1 ? 's' : ''} réservé${totalDaysBooked > 1 ? 's' : ''}`;
-  document.getElementById('kpi-km').textContent = String(estimatedKm);
-  document.getElementById('kpi-co2').textContent = String(estimatedCo2);
-}
-
-function prevMonth() { currentMonth--; if (currentMonth < 0) { currentMonth = 11; currentYear--; } renderCalendar(); }
-function nextMonth() { currentMonth++; if (currentMonth > 11) { currentMonth = 0; currentYear++; } renderCalendar(); }
-function goToToday() {
-  const now = new Date();
-  currentMonth = now.getMonth();
-  currentYear = now.getFullYear();
-  switchTab('calendar');
-  renderCalendar();
-  showToast("Retour à aujourd'hui");
-}
-
-
-function estimateRoundTripKm(destination) {
-  const map = {
-    'Paris intra-muros': 12,
-    'Versailles': 46,
-    'Roissy CDG': 66,
-    'Orly': 38,
-    'Lille': 450,
-    'Reims': 290,
-    'Orléans': 268,
-    'Rouen': 272,
-    'Lyon': 930,
-    'Nantes': 770,
-    'Bordeaux': 1170,
-    'Marseille': 1540
-  };
-  return map[destination] || null;
-}
-
-function getBookingDestinationLabel(booking) {
-  if (!booking) return 'Destination non précisée';
-  if (typeof booking.destination === 'string' && booking.destination.trim()) return booking.destination.trim();
-  if (Array.isArray(booking.destinations) && booking.destinations.length > 0) {
-    const names = booking.destinations
-      .map(d => (d?.name || '').trim())
-      .filter(Boolean);
-    if (names.length) return names.join(', ');
-  }
-  return 'Destination non précisée';
-}
-
-function estimateDistanceForBooking(booking) {
-  if (!booking) return 0;
-  if (typeof booking.kmEstimate === 'number' && booking.kmEstimate > 0) return booking.kmEstimate;
-  if (typeof booking.distanceKm === 'number' && booking.distanceKm > 0) return booking.distanceKm;
-
-  if (Array.isArray(booking.destinations) && booking.destinations.length > 0) {
-    const fromDestinations = booking.destinations
-      .map(d => Number(d?.kmFromParis || 0))
-      .filter(km => Number.isFinite(km) && km > 0)
-      .reduce((sum, km) => sum + (km * 2), 0);
-    if (fromDestinations > 0) return fromDestinations;
-  }
-
-  const destination = getBookingDestinationLabel(booking);
-  const estimated = estimateRoundTripKm(destination);
-  return estimated || 0;
-}
-
-// ==========================================
-// XP / LEVEL / STREAK SYSTEM
-// ==========================================
-const LEVELS = [
-  { name: 'Apprenti',   min: 0,    max: 100,  color: '#6366f1' },
-  { name: 'Conducteur', min: 100,  max: 300,  color: '#0ea5e9' },
-  { name: 'Expert',     min: 300,  max: 600,  color: '#10b981' },
-  { name: 'Pilote',     min: 600,  max: 1000, color: '#f59e0b' },
-  { name: 'Légende',    min: 1000, max: 9999, color: '#f43f5e' },
-];
-
-function getXpForAllTime() {
-  if (!currentUser) return 0;
-  const seen = new Set(); let xp = 0;
-  Object.values(bookings).forEach(b => {
-    if (b.userId === currentUser.id && !seen.has(b.id)) {
-      seen.add(b.id);
-      xp += 20 + Math.round(estimateDistanceForBooking(b) / 25);
-      const fuel = getFuelReturnLevelForBooking(b);
-      if (fuel !== null) xp += fuel >= 50 ? 10 : 5;
-    }
-  });
-  return xp;
-}
-
-function getLevelFromXp(xp) {
-  for (let i = LEVELS.length - 1; i >= 0; i--) {
-    if (xp >= LEVELS[i].min) return { index: i, ...LEVELS[i] };
-  }
-  return { index: 0, ...LEVELS[0] };
-}
-
-function getMonthKey(dateStr) {
-  return dateStr ? dateStr.slice(0, 7) : '';
-}
-
-function computeStreak() {
-  if (!currentUser) return 0;
-  const seen = new Set(); const bookedMonths = new Set();
-  Object.values(bookings).forEach(b => {
-    if (b.userId === currentUser.id && !seen.has(b.id)) {
-      seen.add(b.id); bookedMonths.add(getMonthKey(b.startDate || b.date));
-    }
-  });
-  const now = new Date();
-  let streak = 0;
-  for (let i = 0; i <= 24; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    if (bookedMonths.has(key)) {
-      streak++;
-    } else if (i === 0) {
-      continue; // current month not yet booked, check previous
-    } else {
-      break;
-    }
-  }
-  return streak;
-}
-
-// ==========================================
-// FUEL HELPERS
-// ==========================================
-const FUEL_COLORS = { 0: '#ef4444', 25: '#f97316', 50: '#eab308', 75: '#84cc16', 100: '#22c55e' };
-const FUEL_LABELS = { 0: 'Vide', 25: '1/4', 50: '1/2', 75: '3/4', 100: 'Plein' };
-
-function getFuelBar(level) {
-  if (level === null || level === undefined) {
-    return '<span style="color:var(--text-light);font-size:13px">Inconnu</span>';
-  }
-  return `<div class="fuel-mini-bar">
-    <div class="fuel-mini-track"><div class="fuel-mini-fill" style="width:${level}%;background:${FUEL_COLORS[level]}"></div></div>
-    <span style="font-size:13px;font-weight:600;color:var(--text)">${FUEL_LABELS[level] || level + '%'}</span>
-  </div>`;
-}
-
-// ==========================================
-// BADGES
-// ==========================================
-const BADGE_DEFS = [
-  { id: 'first_ride',   label: 'Première sortie', desc: '1er trajet réalisé',         check: (b, s) => b.length >= 1 },
-  { id: 'road_5',       label: '5 trajets',       desc: '5 trajets cumulés',           check: (b, s) => b.length >= 5 },
-  { id: 'road_warrior', label: 'Routier',          desc: '10 trajets cumulés',          check: (b, s) => b.length >= 10 },
-  { id: 'long_haul',    label: 'Grand Voyageur',   desc: 'Un trajet de 200 km ou plus', check: (b, s) => b.some(x => (x.distanceKm || 0) >= 200) },
-  { id: 'streak_3',     label: 'Régulier',         desc: '3 mois consécutifs',          check: (b, s) => s >= 3 },
-  { id: 'streak_6',     label: 'Fidèle',           desc: '6 mois consécutifs',          check: (b, s) => s >= 6 },
-];
-
-function computeEarnedBadges() {
-  if (!currentUser) return new Set();
-  const seen = new Set();
-  const myBookings = Object.values(bookings).filter(b => {
-    if (b.userId === currentUser.id && !seen.has(b.id)) { seen.add(b.id); return true; } return false;
-  });
-  const streak = computeStreak();
-  const earned = new Set();
-  BADGE_DEFS.forEach(def => { if (def.check(myBookings, streak)) earned.add(def.id); });
-  return earned;
-}
-
-function checkNewBadges() {
-  if (!currentUser) return [];
-  const key = `badges_seen_${currentUser.id}`;
-  const seen = JSON.parse(localStorage.getItem(key) || '[]');
-  const seenSet = new Set(seen);
-  const earned = computeEarnedBadges();
-  const newBadges = BADGE_DEFS.filter(d => earned.has(d.id) && !seenSet.has(d.id));
-  if (newBadges.length > 0) {
-    const updated = [...seen, ...newBadges.map(d => d.id)];
-    localStorage.setItem(key, JSON.stringify(updated));
-  }
-  return newBadges;
-}
-
-function renderXpHeroCard() {
-  if (!currentUser) {
-    const card = document.getElementById('xp-hero-card');
-    if (card) card.style.background = 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
-    const xpName = document.getElementById('xp-name');
-    if (xpName) xpName.textContent = 'Connecte-toi';
-    return;
-  }
-  const xp = getXpForAllTime();
-  const level = getLevelFromXp(xp);
-  const xpInLevel = xp - level.min;
-  const levelRange = level.max - level.min;
-  const pct = Math.min(100, Math.round((xpInLevel / levelRange) * 100));
-  const streak = computeStreak();
-
-  const avContent = currentUser.photo
-    ? `<img src="${currentUser.photo}" alt="" style="width:100%;height:100%;object-fit:cover">`
-    : getInitials(currentUser.name);
-  const avEl = document.getElementById('xp-avatar');
-  if (avEl) avEl.innerHTML = avContent;
-
-  const nameEl = document.getElementById('xp-name');
-  if (nameEl) nameEl.textContent = currentUser.name;
-
-  const badgeEl = document.getElementById('xp-level-badge');
-  if (badgeEl) badgeEl.textContent = `Niveau ${level.index + 1} · ${level.name}`;
-
-  const streakEl = document.getElementById('xp-streak');
-  if (streakEl) {
-    streakEl.textContent = `🔥 ${streak}`;
-    streakEl.style.textShadow = streak >= 3 ? '0 0 12px rgba(245,158,11,0.6)' : 'none';
-  }
-
-  const fillEl = document.getElementById('xp-bar-fill');
-  if (fillEl) fillEl.style.width = Math.max(2, pct) + '%';
-
-  const curEl = document.getElementById('xp-current');
-  if (curEl) curEl.textContent = `${xp} XP`;
-
-  const nextEl = document.getElementById('xp-next');
-  if (nextEl) nextEl.textContent = `sur ${level.max} XP`;
-
-  const card = document.getElementById('xp-hero-card');
-  if (card) card.style.background = `linear-gradient(135deg, ${level.color} 0%, ${level.color}cc 100%)`;
-}
-
-// ==========================================
-// LEADERBOARD PODIUM
-// ==========================================
-function renderLeaderboard(ranking) {
-  const podiumEl = document.getElementById('podium');
-  const restEl = document.getElementById('lb-rest');
-  if (!podiumEl || !restEl) return;
-
-  // Visual podium order: 2nd, 1st, 3rd
-  const podiumSlots = [
-    { player: ranking[1], rank: 2, height: 70, medal: '🥈' },
-    { player: ranking[0], rank: 1, height: 90, medal: '🥇' },
-    { player: ranking[2], rank: 3, height: 55, medal: '🥉' },
-  ];
-
-  podiumEl.innerHTML = podiumSlots.map(({ player, rank, height, medal }) => {
-    if (!player) return `<div class="podium-slot rank-${rank}"></div>`;
-    const av = player.photo
-      ? `<img src="${player.photo}" alt="" style="width:100%;height:100%;object-fit:cover">`
-      : getInitials(player.label);
-    return `<div class="podium-slot rank-${rank}">
-      <div class="podium-avatar">${av}</div>
-      <div class="podium-name">${player.label}</div>
-      <div class="podium-score">${player.score} pts · ${player.rides} trajet${player.rides > 1 ? 's' : ''}</div>
-      <div class="podium-bar rank-${rank}" style="height:${height}px">${medal}</div>
-      <div class="podium-rank">#${rank}</div>
-    </div>`;
-  }).join('');
-
-  if (ranking.length <= 3) { restEl.innerHTML = ''; return; }
-
-  restEl.innerHTML = ranking.slice(3).map((r, i) => {
-    const isMe = currentUser && r.label === currentUser.name;
-    const av = r.photo
-      ? `<img src="${r.photo}" alt="" style="width:100%;height:100%;object-fit:cover">`
-      : getInitials(r.label);
-    return `<div class="lb-row ${isMe ? 'is-me' : ''}">
-      <div class="lb-rank-num">${i + 4}</div>
-      <div class="lb-avatar-sm">${av}</div>
-      <div class="lb-info">
-        <div class="lb-info-name">${r.label}${isMe ? ' (moi)' : ''}</div>
-        <div class="lb-info-sub">${r.rides} trajet${r.rides > 1 ? 's' : ''}</div>
-      </div>
-      <div class="lb-pts">${r.score} pts</div>
-    </div>`;
-  }).join('');
-}
-
-// ==========================================
-// CELEBRATION OVERLAY
-// ==========================================
-function celebrate(icon, title, xpText, subtitle) {
-  const colors = ['rgba(255,255,255,0.85)', '#f59e0b', 'rgba(255,255,255,0.5)', '#10b981', '#a5b4fc', '#fde68a'];
-  const container = document.getElementById('confetti-container');
-  if (container) {
-    container.innerHTML = '';
-    for (let i = 0; i < 18; i++) {
-      const piece = document.createElement('div');
-      piece.className = 'confetti-piece';
-      const size = Math.round(6 + Math.random() * 7);
-      piece.style.width = size + 'px';
-      piece.style.height = size + 'px';
-      piece.style.background = colors[Math.floor(Math.random() * colors.length)];
-      piece.style.borderRadius = Math.random() > 0.4 ? '50%' : '2px';
-      piece.style.left = Math.random() * 100 + 'vw';
-      piece.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
-      piece.style.animationDelay = Math.random() * 0.8 + 's';
-      container.appendChild(piece);
-    }
-  }
-  const celEl = document.getElementById('celebration');
-  if (!celEl) return;
-  document.getElementById('cel-emoji').textContent = icon || '✓';
-  document.getElementById('cel-title').textContent = title || 'Super !';
-  document.getElementById('cel-xp').textContent = xpText || '';
-  document.getElementById('cel-sub').textContent = subtitle || '';
-  celEl.style.display = 'flex';
-  setTimeout(() => {
-    celEl.style.display = 'none';
-    renderXpHeroCard();
-  }, 2500);
-}
-
-// ==========================================
-// FUEL RETURN SHEET
-// ==========================================
-let selectedFuelLevel = null;
-
-function showFuelSheet() {
-  selectedFuelLevel = null;
-  const fuelLevels = [
-    { value: 0,   label: 'Vide',  color: '#ef4444', heightPct: 6   },
-    { value: 25,  label: '1/4',   color: '#f97316', heightPct: 30  },
-    { value: 50,  label: '1/2',   color: '#eab308', heightPct: 55  },
-    { value: 75,  label: '3/4',   color: '#84cc16', heightPct: 78  },
-    { value: 100, label: 'Plein', color: '#10b981', heightPct: 100 },
-  ];
-  const buttonsHtml = fuelLevels.map(f => `
-    <button class="fuel-btn" onclick="selectFuel(${f.value}, this)" type="button">
-      <div class="fuel-bar-wrap">
-        <div class="fuel-bar-fill" style="height:${f.heightPct}%;background:${f.color}"></div>
-      </div>
-      <div class="fuel-label">${f.label}</div>
-    </button>`).join('');
-  document.getElementById('sheet-content').innerHTML = `
-    <div style="text-align:center;padding-bottom:4px">
-      <h3 style="font-size:22px;font-weight:700;margin-bottom:6px">Niveau d'essence rendu ?</h3>
-      <p style="font-size:14px;color:var(--text-light)">Aidez la famille à planifier le prochain plein</p>
-    </div>
-    <div class="fuel-selector">${buttonsHtml}</div>
-    <button class="btn btn-primary" id="fuel-confirm-btn" onclick="confirmFuel()" disabled style="opacity:0.4">Confirmer</button>
-    <button class="btn" style="background:#f5f5f5;color:var(--text);margin-top:10px" onclick="closeSheet()">Passer</button>`;
-  document.getElementById('overlay').classList.add('open');
-}
-
-function selectFuel(value, btn) {
-  selectedFuelLevel = value;
-  document.querySelectorAll('.fuel-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-  const confirmBtn = document.getElementById('fuel-confirm-btn');
-  if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.style.opacity = '1'; }
-}
-
-function confirmFuel() {
-  const level = selectedFuelLevel;
-  selectedFuelLevel = null;
-  closeSheet();
-  if (level !== null && level >= 50) {
-    celebrate('⛽', 'Youpi ! Merci !', '🌟', 'La voiture est bien ravitaillée');
-  } else if (level !== null) {
-    showToast('Pense à refaire le plein avant la prochaine sortie');
-  }
-}
-
-function updateDistanceFromDestination() {
-  const destination = document.getElementById('booking-destination')?.value || '';
-  const kmInput = document.getElementById('booking-km');
-  if (!kmInput) return;
-  const estimated = estimateRoundTripKm(destination);
-  if (estimated) kmInput.value = estimated;
-}
-
-// ==========================================
-// DAY CLICK
-// ==========================================
-function onDayClick(dateStr, isPast) {
-  if (isPast) {
-    // Past days with MY booking → show trip report with fuel prompt
-    if (currentUser) {
-      const booking = bookings[dateStr];
-      if (booking && booking.userId === currentUser.id) {
-        const date = new Date(dateStr + 'T00:00:00');
-        const prettyDate = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-        showTripReport(booking, prettyDate);
-      }
-    }
-    return;
-  }
-  if (!currentUser) { showWelcomeScreen(); return; }
-
-  const booking = bookings[dateStr];
-  const date = new Date(dateStr + 'T00:00:00');
-  const prettyDate = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-
-  let html = '';
-  if (booking) {
-    const isMine = currentUser && booking.userId === currentUser.id;
-    const avatarContent = booking.photo ? `<img src="${booking.photo}" alt="">` : getInitials(booking.userName);
-    html = `
-      <div class="sheet-date">${prettyDate}</div>
-      <div class="sheet-status">
-        <div class="booked-by">
-          <div class="avatar-lg">${avatarContent}</div>
-          <div class="info">${booking.userName}<small>${isMine ? 'Votre réservation' : 'A réservé ce jour'}</small></div>
-        </div>
-      </div>
-      <button class="btn" style="background:#f5f5f5;color:var(--text)" onclick="closeSheet()">Fermer</button>`;
-  } else {
-    const activeCar = cars.find(c => c.id === selectedCar);
-    html = `
-      <div class="sheet-date">${prettyDate}</div>
-      <div style="font-size:14px;color:var(--text-light);margin-bottom:14px">Planning en lecture seule dans cet onglet.</div>
-      <div class="fuel-info-row"><span>Essence disponible</span>${getFuelBar(activeCar?.fuelLevel)}</div>
-      <button class="btn btn-primary" onclick="goToDashboardBooking()">Réserver depuis le Dashboard</button>
-      <button class="btn" style="background:#f5f5f5;color:var(--text)" onclick="closeSheet()">Fermer</button>`;
-  }
-
-  document.getElementById('sheet-content').innerHTML = html;
-  document.getElementById('overlay').classList.add('open');
-}
-
-function goToDashboardBooking() {
-  closeSheet();
-  switchTab('dashboard');
-  openBookingModal();
-}
-
-// ==========================================
-// BOOK / CANCEL
-// ==========================================
-async function book(dateStr) {
-  if (!currentUser) return;
-  try {
-    // Check for existing booking (prevent double-booking)
-    const existing = await familyRef().collection('bookings').where('carId', '==', selectedCar).where('date', '==', dateStr).get();
-    if (!existing.empty) { closeSheet(); showToast("Ce jour vient d'être réservé"); return; }
-
-    const destination = (document.getElementById('booking-destination')?.value || '').trim();
-    const distanceKm = Number(document.getElementById('booking-km')?.value || 0);
-    if (!destination) { showToast('Choisissez une destination'); return; }
-    if (!distanceKm || distanceKm <= 0) { showToast('Ajoutez une distance valide (km)'); return; }
-
-    await familyRef().collection('bookings').add({
-      carId: selectedCar, date: dateStr,
-      userId: currentUser.id, userName: currentUser.name,
-      photo: currentUser.photo || null,
-      destination,
-      distanceKm,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    const xpGained = 20 + Math.round(distanceKm / 25);
-    closeSheet();
-    celebrate('✓', 'Réservation confirmée !', `+${xpGained} XP`, `Direction : ${destination}`);
-    setTimeout(() => {
-      const newBadges = checkNewBadges();
-      newBadges.forEach(b => showToast(`Badge débloqué : ${b.label}`));
-    }, 2800);
-  } catch (e) { showToast('Erreur — réessayez'); }
-}
-
-async function cancelBooking(bookingId) {
-  try {
-    await familyRef().collection('bookings').doc(bookingId).delete();
-    closeSheet();
-    showToast('Réservation annulée');
-  } catch (e) { showToast('Erreur — réessayez'); }
-}
-
-function showTripReport(booking, prettyDate) {
-  const existingFuelLevel = getFuelReturnLevelForBooking(booking);
-  const hasFuel = existingFuelLevel !== null && existingFuelLevel !== undefined;
-  const fuelLevels = [
-    { value: 0,   label: 'Vide',  color: '#ef4444', heightPct: 6   },
-    { value: 25,  label: '1/4',   color: '#f97316', heightPct: 30  },
-    { value: 50,  label: '1/2',   color: '#eab308', heightPct: 55  },
-    { value: 75,  label: '3/4',   color: '#84cc16', heightPct: 78  },
-    { value: 100, label: 'Plein', color: '#10b981', heightPct: 100 },
-  ];
-
-  let fuelSection;
-  if (!hasFuel) {
-    fuelSection = `
-      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-        <div style="font-size:14px;font-weight:600;margin-bottom:12px">Niveau d'essence rendu ?</div>
-        <div class="fuel-selector">${fuelLevels.map(f => `
-          <button class="fuel-btn" onclick="selectFuel(${f.value}, this)" type="button">
-            <div class="fuel-bar-wrap"><div class="fuel-bar-fill" style="height:${f.heightPct}%;background:${f.color}"></div></div>
-            <div class="fuel-label">${f.label}</div>
-          </button>`).join('')}</div>
-        <button class="btn btn-primary" id="fuel-confirm-btn" onclick="confirmFuelAfterTrip('${booking.id}')" disabled style="opacity:0.4;margin-top:8px">Enregistrer</button>
-      </div>`;
-  } else {
-    const labels = { 0: 'Vide', 25: '1/4', 50: '1/2', 75: '3/4', 100: 'Plein' };
-    fuelSection = `<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);color:var(--text-light);font-size:13px">Essence rendue : <strong>${labels[existingFuelLevel] || existingFuelLevel + '%'}</strong></div>`;
-  }
-
-  document.getElementById('sheet-content').innerHTML = `
-    <div class="sheet-date">${prettyDate}</div>
-    <div style="font-size:14px;color:var(--text-light);margin-bottom:4px">${getBookingDestinationLabel(booking)} · ${estimateDistanceForBooking(booking)} km</div>
-    ${fuelSection}
-    <button class="btn" style="background:#f5f5f5;color:var(--text);margin-top:16px" onclick="closeSheet()">Fermer</button>`;
-  document.getElementById('overlay').classList.add('open');
-}
-
-async function confirmFuelAfterTrip(bookingId) {
-  const level = selectedFuelLevel;
-  if (level === null) return;
-  selectedFuelLevel = null;
-  try {
-    await familyRef().collection('cars').doc(selectedCar).update({ fuelLevel: level });
-
-    const booking = getUniqueBookingsSorted().find(b => b.id === bookingId);
-    await familyRef().collection('bookings').doc(bookingId).update({
-      fuelReturnLevel: level,
-      fuelUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    const car = cars.find(c => c.id === selectedCar);
-    if (car) car.fuelLevel = level;
-    if (booking) booking.fuelReturnLevel = level;
-    fuelReportsByBooking[bookingId] = { ...(fuelReportsByBooking[bookingId] || {}), bookingId, fuelReturnLevel: level };
-
-    closeSheet();
-    renderExperiencePanels();
-    const xpFuel = level >= 50 ? 10 : 5;
-    if (level >= 50) {
-      celebrate('✓', 'Merci ! Réservoir mis à jour', `+${xpFuel} XP`, 'Le prochain conducteur voit le bon niveau');
-    } else {
-      celebrate('✓', 'Niveau enregistré', `+${xpFuel} XP`, 'Pense à refaire le plein avant la prochaine sortie');
-    }
-  } catch(e) { showToast('Erreur — réessayez'); }
-}
-
-
-// ==========================================
-// PHOTO HANDLER
-// ==========================================
-function handlePhoto(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const size = 120; canvas.width = size; canvas.height = size;
-      const ctx = canvas.getContext('2d');
-      const min = Math.min(img.width, img.height);
-      ctx.drawImage(img, (img.width - min)/2, (img.height - min)/2, min, min, 0, 0, size, size);
-      tempPhoto = canvas.toDataURL('image/jpeg', 0.6);
-      const preview = document.getElementById('photo-preview');
-      preview.innerHTML = `<img src="${tempPhoto}" alt="">`;
-      preview.classList.add('has-photo');
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-// ==========================================
-// PROFILE / LOGOUT / CHANGE PIN
-// ==========================================
-function showProfile() {
-  if (!currentUser) { showWelcomeScreen(); return; }
-  const av = currentUser.photo ? `<img src="${currentUser.photo}" alt="">` : getInitials(currentUser.name);
-  const xp = getXpForAllTime();
-  const level = getLevelFromXp(xp);
-  const earned = computeEarnedBadges();
-  const badgeItems = BADGE_DEFS.map(def => {
-    const cls = earned.has(def.id) ? 'earned' : 'locked';
-    return `<div class="badge-item ${cls}"><div class="badge-item-label">${def.label}</div><div class="badge-item-desc">${def.desc}</div></div>`;
-  }).join('');
-  document.getElementById('sheet-content').innerHTML = `
-    <div class="login-sheet">
-      <h2>Mon profil</h2>
-      <div class="profile-row">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-          <div class="profile-avatar">${av}</div>
-          <label style="font-size:12px;color:var(--accent);cursor:pointer;text-decoration:underline" onclick="document.getElementById('profile-photo-input').click()">Modifier photo</label>
-          <input type="file" id="profile-photo-input" accept="image/*" style="display:none" onchange="changeProfilePhoto(this)">
-        </div>
-        <div class="profile-meta">
-          <div class="name">${currentUser.name}</div>
-          <div class="email">${currentUser.email}</div>
-        </div>
-      </div>
-      <div class="profile-xp-row">
-        <span class="profile-xp-badge">${level.name}</span>
-        <span class="profile-xp-num">${xp} XP</span>
-      </div>
-      <div style="margin-top:14px"><div style="font-weight:700;font-size:14px;margin-bottom:4px">Badges</div>
-        <div class="badge-grid">${badgeItems}</div>
-      </div>
-      <button class="btn" style="background:var(--accent-light);color:var(--accent);margin-top:16px" onclick="showChangePin()">Changer mon code</button>
-      <button class="btn btn-danger" style="margin-top:10px" onclick="logout()">Se déconnecter</button>
-      <button class="btn" style="background:#f5f5f5;color:var(--text);margin-top:10px" onclick="closeSheet()">Fermer</button>
-    </div>`;
-  document.getElementById('overlay').classList.add('open');
-}
-
-async function changeProfilePhoto(input) {
-  const file = input.files[0];
-  if (!file || !currentUser) return;
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const img = new Image();
-    img.onload = async () => {
-      const canvas = document.createElement('canvas');
-      const size = 120; canvas.width = size; canvas.height = size;
-      const ctx = canvas.getContext('2d');
-      const min = Math.min(img.width, img.height);
-      ctx.drawImage(img, (img.width - min)/2, (img.height - min)/2, min, min, 0, 0, size, size);
-      const photo = canvas.toDataURL('image/jpeg', 0.6);
-      try {
-        await familyRef().collection('members').doc(currentUser.id).update({ photo });
-        currentUser.photo = photo;
-        localStorage.setItem('famcar_user', JSON.stringify(currentUser));
-        updateUserPill();
-        showProfile(); // re-render sheet with new photo
-        showToast('Photo mise à jour ✓');
-      } catch(e) { showToast('Erreur — réessayez'); }
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-async function showCarInfo() {
-  const car = cars.find(c => c.id === selectedCar);
-  if (!car) return;
-  const plaque = car.plaque || '';
-  const assurance = car.assurance || '';
-  const observations = car.observations || '';
-  document.getElementById('sheet-content').innerHTML = `
-    <div class="login-sheet">
-      <h2>Info voiture</h2>
-      <div style="color:var(--text-light);font-size:13px;margin-bottom:20px">${car.emoji || '🚗'} ${car.name}</div>
-      <div class="input-group">
-        <label>Plaque d'immatriculation</label>
-        <input type="text" id="car-plaque" placeholder="Ex: AB-123-CD" value="${plaque}" style="text-transform:uppercase">
-      </div>
-      <div class="input-group">
-        <label>Assurance</label>
-        <input type="text" id="car-assurance" placeholder="Compagnie / n° de contrat" value="${assurance}">
-      </div>
-      <div class="input-group">
-        <label>Observations</label>
-        <textarea id="car-observations" placeholder="Carrosserie, entretien, notes..." rows="3" style="resize:none;padding:10px;border:1px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;width:100%">${observations}</textarea>
-      </div>
-      <button class="btn btn-primary" onclick="saveCarInfo()">Enregistrer</button>
-      <button class="btn" style="background:#f5f5f5;color:var(--text);margin-top:10px" onclick="closeSheet()">Fermer</button>
-    </div>`;
-  document.getElementById('overlay').classList.add('open');
-}
-
-async function saveCarInfo() {
-  const plaque = (document.getElementById('car-plaque')?.value || '').trim().toUpperCase();
-  const assurance = (document.getElementById('car-assurance')?.value || '').trim();
-  const observations = (document.getElementById('car-observations')?.value || '').trim();
-  try {
-    await familyRef().collection('cars').doc(selectedCar).update({ plaque, assurance, observations });
-    const car = cars.find(c => c.id === selectedCar);
-    if (car) Object.assign(car, { plaque, assurance, observations });
-    closeSheet();
-    showToast('Infos voiture enregistrées ✓');
-  } catch(e) { showToast('Erreur — réessayez'); }
-}
-
-function showChangePin() {
-  document.getElementById('sheet-content').innerHTML = `
-    <div class="login-sheet">
-      <h2>Nouveau code</h2>
-      <p style="color:var(--text-light);font-size:14px;margin-bottom:20px">Choisissez un nouveau code à 4 chiffres</p>
-      <div class="pin-input" id="change-pin-input">
-        <input type="tel" maxlength="1" inputmode="numeric" autocomplete="off">
-        <input type="tel" maxlength="1" inputmode="numeric" autocomplete="off">
-        <input type="tel" maxlength="1" inputmode="numeric" autocomplete="off">
-        <input type="tel" maxlength="1" inputmode="numeric" autocomplete="off">
-      </div>
-      <div class="lock-error" id="change-pin-error"></div>
-      <button class="btn btn-primary" onclick="saveNewPin()">Enregistrer</button>
-      <button class="btn" style="background:#f5f5f5;color:var(--text);margin-top:10px" onclick="showProfile()">Retour</button>
-    </div>`;
-  const inputs = document.querySelectorAll('#change-pin-input input');
-  setTimeout(() => inputs[0].focus(), 100);
-  setupPinInputs(inputs);
-}
-
-async function saveNewPin() {
-  const pin = Array.from(document.querySelectorAll('#change-pin-input input')).map(i => i.value.replace(/\D/g, '')).join('');
-  if (pin.length < 4) { document.getElementById('change-pin-error').textContent = 'Entrez 4 chiffres'; return; }
-  try {
-    await db.collection('users').doc(currentUser.id).update({ pin });
-    closeSheet();
-    showToast('Code personnel mis à jour ✓');
-  } catch (e) { document.getElementById('change-pin-error').textContent = 'Erreur — réessayez'; }
-}
-
-function logout() {
-  currentUser = null;
-  localStorage.removeItem('famcar_user');
-  closeSheet();
-  showWelcomeScreen();
-  showToast('Déconnecté');
-}
-
-function enterApp() {
-  document.getElementById('app-header').style.display = 'flex';
-  document.getElementById('app-main').style.display = 'block';
-  updateUserPill();
-  switchTab(activeTab || 'dashboard');
-  renderCalendar();
-  setTimeout(() => maybePromptPendingFuel(), 350);
-}
-
-function updateUserPill() {
-  const avatar = document.getElementById('header-avatar');
-  const name = document.getElementById('header-name');
-  if (currentUser) {
-    name.textContent = currentUser.name;
-    avatar.innerHTML = currentUser.photo ? `<img src="${currentUser.photo}" alt="">` : getInitials(currentUser.name);
-  } else {
-    avatar.innerHTML = '?';
-    name.textContent = 'Se connecter';
-  }
-}
-
-
-// ==========================================
-// HELPERS
-// ==========================================
-function getInitials(name) { return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2); }
-function closeSheet() { document.getElementById('overlay').classList.remove('open'); }
-function showToast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg; el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 2500);
-}
-
-// Reusable PIN input setup (auto-advance, backspace, auto-submit)
-function setupPinInputs(inputs, onComplete) {
-  inputs.forEach((input, i) => {
-    input.addEventListener('input', (e) => {
-      const val = e.target.value;
-      if (val.length > 1) e.target.value = val.slice(-1);
-      if (val && i < inputs.length - 1) inputs[i + 1].focus();
-      if (i === inputs.length - 1 && val && onComplete) onComplete();
-    });
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Backspace' && !e.target.value && i > 0) inputs[i - 1].focus();
-      if (e.key === 'Enter' && onComplete) onComplete();
-    });
-  });
-}
-
-// Swipe to change month
-let touchStartX = 0;
-document.addEventListener('DOMContentLoaded', () => {
-  const grid = document.getElementById('cal-grid');
-  grid.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
-  grid.addEventListener('touchend', e => {
-    const diff = e.changedTouches[0].clientX - touchStartX;
-    if (Math.abs(diff) > 60) { diff > 0 ? prevMonth() : nextMonth(); }
-  }, { passive: true });
-});
-
-// ==========================================
-// BOOKING MODAL (Airbnb style)
-// ==========================================
-let bm = { startDate: null, endDate: null, startHour: '09:00', endHour: '20:00', destinations: [], step: 'start' };
-
-const DEST_PRESETS = [
-  { name: 'Paris intra-muros', km: 6 },
-  { name: 'Versailles', km: 23 },
-  { name: 'Roissy CDG', km: 33 },
-  { name: 'Orly', km: 19 },
-  { name: 'Reims', km: 145 },
-  { name: 'Orléans', km: 134 },
-  { name: 'Rouen', km: 136 },
-  { name: 'Lyon', km: 465 },
-  { name: 'Nantes', km: 385 },
-  { name: 'Bordeaux', km: 585 },
-  { name: 'Marseille', km: 770 },
-  { name: 'Lille', km: 225 },
-];
-
-let bmCurrentStep = 'destination';
-
-function renderBmSteps() {
-  const steps = ['destination', 'dates', 'hours'];
-  const currentIndex = steps.indexOf(bmCurrentStep);
-  steps.forEach((step, i) => {
-    const el = document.getElementById(`bm-step-${step}`);
-    if (!el) return;
-    el.classList.remove('active', 'completed', 'upcoming');
-    if (i < currentIndex) el.classList.add('completed');
-    else if (i === currentIndex) el.classList.add('active');
-    else el.classList.add('upcoming');
-  });
-  // Update mini card values
-  const destVal = document.getElementById('bm-mini-dest-val');
-  if (destVal) destVal.textContent = bm.destinations.length > 0 ? bm.destinations[0].name : 'Je suis flexible';
-  const datesVal = document.getElementById('bm-mini-dates-val');
-  if (datesVal) datesVal.textContent = bm.startDate
-    ? (bm.endDate && bm.endDate !== bm.startDate
-        ? formatBmDateRange(bm.startDate, bm.endDate)
-        : new Date(bm.startDate + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }))
-    : 'Ajouter des dates';
-  const hoursVal = document.getElementById('bm-mini-hours-val');
-  if (hoursVal) hoursVal.textContent = `${bm.startHour} → ${bm.endHour}`;
-  // Footer button
-  const nextBtn = document.getElementById('bm-next-btn');
-  if (nextBtn) {
-    if (bmCurrentStep === 'hours') {
-      nextBtn.textContent = 'Réserver';
-      nextBtn.disabled = !bm.startDate;
-    } else if (bmCurrentStep === 'dates') {
-      nextBtn.textContent = 'Suivant';
-      nextBtn.disabled = !bm.startDate;
-    } else {
-      nextBtn.textContent = 'Suivant';
-      nextBtn.disabled = false;
-    }
-  }
-}
-
-function bmNextStep() {
-  if (bmCurrentStep === 'destination') {
-    bmCurrentStep = 'dates';
-    renderBmCalendar();
-  } else if (bmCurrentStep === 'dates') {
-    bmCurrentStep = 'hours';
-  } else if (bmCurrentStep === 'hours') {
-    confirmRangeBooking();
-    return;
-  }
-  renderBmSteps();
-  setTimeout(() => {
-    document.getElementById(`bm-step-${bmCurrentStep}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 50);
-}
-
-function goToStep(step) {
-  bmCurrentStep = step;
-  if (step === 'dates') renderBmCalendar();
-  renderBmSteps();
-  setTimeout(() => {
-    document.getElementById(`bm-step-${step}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 50);
-}
-
-function openBookingModal() {
-  if (!currentUser) { showWelcomeScreen(); return; }
-  bm = { startDate: null, endDate: null, startHour: '09:00', endHour: '20:00', destinations: [], step: 'start' };
-  bmCurrentStep = 'destination';
-  document.getElementById('booking-modal').classList.add('open');
-  const sh = document.getElementById('bm-start-hour'); if (sh) sh.value = '09:00';
-  const eh = document.getElementById('bm-end-hour'); if (eh) eh.value = '20:00';
-  const di = document.getElementById('bm-dest-input'); if (di) di.value = '';
-  const hint = document.getElementById('bm-dates-hint'); if (hint) hint.textContent = 'Sélectionnez votre date de départ';
-  renderDestSuggestions('');
-  renderBmSteps();
-}
-
-function closeBookingModal() {
-  document.getElementById('booking-modal').classList.remove('open');
-}
-
-function renderBmCalendar() {
-  const container = document.getElementById('bm-calendar-container');
-  const body = document.getElementById('bm-body');
-  if (!container) return;
-  const scrollTop = body ? body.scrollTop : 0;
-  const today = new Date(); today.setHours(0,0,0,0);
-  let html = '';
-
-  for (let m = 0; m < 4; m++) {
-    const d = new Date(today.getFullYear(), today.getMonth() + m, 1);
-    const year = d.getFullYear(); const month = d.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    let firstDay = d.getDay() - 1; if (firstDay < 0) firstDay = 6;
-    const availBands = computeAvailBands(year, month, daysInMonth);
-
-    html += `<div class="bm-month-block">`;
-    html += `<div class="bm-month-label">${d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</div>`;
-    if (availBands.length > 0) html += `<div class="bm-avail-band">✓ Disponible : ${availBands.join(', ')}</div>`;
-    html += `<div class="bm-cal-grid">`;
-    for (let i = 0; i < firstDay; i++) html += `<div class="bm-day bm-empty"></div>`;
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-      const cellDate = new Date(year, month, day);
-      const isPast = cellDate < today;
-      const isToday = cellDate.getTime() === today.getTime();
-      const booking = bookings[ds];
-
-      let classes = ['bm-day'];
-      if (isPast) classes.push('bm-past');
-      else if (isToday) classes.push('bm-today');
-      if (booking && !isPast) classes.push('bm-booked');
-
-      // Range highlight
-      if (bm.startDate && bm.endDate) {
-        if (ds === bm.startDate && ds === bm.endDate) classes.push('bm-day--start', 'bm-day--end');
-        else if (ds === bm.startDate) classes.push('bm-day--start');
-        else if (ds === bm.endDate) classes.push('bm-day--end');
-        else if (ds > bm.startDate && ds < bm.endDate) classes.push('bm-day--mid');
-      } else if (bm.startDate && ds === bm.startDate) classes.push('bm-day--start', 'bm-day--end');
-
-      let avHtml = '';
-      if (booking) {
-        avHtml = booking.photo
-          ? `<div class="bm-booking-avatar"><img src="${booking.photo}" alt=""></div>`
-          : `<div class="bm-booking-avatar">${getInitials(booking.userName || '?')}</div>`;
-      }
-
-      const onclick = (!isPast && !booking) ? `onclick="onBmDayClick('${ds}')"` : '';
-      html += `<div class="${classes.join(' ')}" ${onclick}><span class="bm-day-num">${day}</span>${avHtml}</div>`;
-    }
-    html += `</div></div>`;
-  }
-  container.innerHTML = html;
-  if (body) body.scrollTop = scrollTop;
-}
-
-function computeAvailBands(year, month, daysInMonth) {
-  const today = new Date(); today.setHours(0,0,0,0);
-  const bands = []; let start = null;
-  for (let d = 1; d <= daysInMonth; d++) {
-    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const free = new Date(year, month, d) >= today && !bookings[ds];
-    if (free && start === null) start = d;
-    if (!free && start !== null) { if ((d-1) - start >= 1) bands.push(`${start} → ${d-1}`); start = null; }
-  }
-  if (start !== null && daysInMonth - start >= 1) bands.push(`${start} → ${daysInMonth}`);
-  return bands.slice(0, 3);
-}
-
-function onBmDayClick(ds) {
-  if (!bm.startDate || bm.endDate) {
-    bm.startDate = ds; bm.endDate = null; bm.step = 'end';
-  } else {
-    if (ds < bm.startDate) { bm.endDate = bm.startDate; bm.startDate = ds; }
-    else bm.endDate = ds;
-    bm.step = 'start';
-  }
-  const hint = document.getElementById('bm-dates-hint');
-  if (hint) {
-    if (bm.startDate && bm.endDate) hint.textContent = formatBmDateRange(bm.startDate, bm.endDate);
-    else hint.textContent = 'Sélectionnez la date de retour';
-  }
-  renderBmCalendar();
-  renderBmSteps();
-}
-
-function formatBmDateRange(s, e) {
-  const sd = new Date(s + 'T00:00:00'), ed = new Date(e + 'T00:00:00');
-  if (s === e) return sd.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
-  const sameMonth = sd.getMonth() === ed.getMonth() && sd.getFullYear() === ed.getFullYear();
-  if (sameMonth) return `${sd.getDate()} — ${ed.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
-  return `${sd.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} — ${ed.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`;
-}
-
-function filterDestSuggestions(val) { renderDestSuggestions(val); }
-
-function renderDestSuggestions(query) {
-  const container = document.getElementById('bm-dest-suggestions');
-  if (!container) return;
-  const q = (query || '').toLowerCase().trim();
-  const list = q ? DEST_PRESETS.filter(d => d.name.toLowerCase().includes(q)) : DEST_PRESETS;
-  container.innerHTML = list.map(d => {
-    const sel = bm.destinations.some(x => x.name === d.name);
-    return `<button class="bm-dest-chip${sel ? ' selected' : ''}" onclick="toggleDestination('${d.name.replace(/'/g,"\\'")}',${d.km})">${d.name}</button>`;
-  }).join('');
-}
-
-function toggleDestination(name, km) {
-  // Single-select : décocher si déjà sélectionné
-  if (bm.destinations.length > 0 && bm.destinations[0].name === name) {
-    bm.destinations = [];
-  } else {
-    bm.destinations = [{ name, km }];
-  }
-  renderDestSuggestions(document.getElementById('bm-dest-input')?.value || '');
-  // Afficher km estimé
-  const kmEl = document.getElementById('bm-dest-km');
-  if (kmEl) kmEl.textContent = bm.destinations.length > 0
-    ? `Distance estimée depuis Paris : ${bm.destinations[0].km * 2} km aller-retour`
-    : '';
-  renderBmSteps();
-}
-
-function updateBookingRecap() {
-  bm.startHour = document.getElementById('bm-start-hour')?.value || '09:00';
-  bm.endHour = document.getElementById('bm-end-hour')?.value || '20:00';
-  renderBmSteps();
-}
-
-function resetBookingModal() {
-  bm.startDate = null; bm.endDate = null; bm.destinations = []; bm.step = 'start';
-  bmCurrentStep = 'destination';
-  const hint = document.getElementById('bm-dates-hint'); if (hint) hint.textContent = 'Sélectionnez votre date de départ';
-  const di = document.getElementById('bm-dest-input'); if (di) di.value = '';
-  const kmEl = document.getElementById('bm-dest-km'); if (kmEl) kmEl.textContent = '';
-  renderDestSuggestions('');
-  renderBmSteps();
-}
-
-async function confirmRangeBooking() {
-  if (!currentUser || !bm.startDate) return;
-  const startDate = bm.startDate;
-  const endDate = bm.endDate || bm.startDate;
-  const startHour = bm.startHour || '09:00';
-  const endHour = bm.endHour || '20:00';
-  const destinations = bm.destinations;
-  const kmEstimate = destinations.reduce((s, d) => s + d.km * 2, 0);
-
-  // Conflict check
-  let cur = new Date(startDate + 'T00:00:00');
-  const endObj = new Date(endDate + 'T00:00:00');
-  while (cur <= endObj) {
-    const ds = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
-    if (bookings[ds]) { showToast(`Conflit : le ${ds} est déjà réservé`); return; }
-    cur.setDate(cur.getDate() + 1);
-  }
-
-  try {
-    await familyRef().collection('bookings').add({
-      carId: selectedCar,
-      userId: currentUser.id, userName: currentUser.name, photo: currentUser.photo || null,
-      startDate, endDate, startHour, endHour,
-      destinations: destinations.map(d => ({ name: d.name, kmFromParis: d.km })),
-      kmEstimate,
-      // Legacy compat
-      date: startDate,
-      destination: destinations.map(d => d.name).join(', '),
-      distanceKm: kmEstimate,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    const xpGained = 20 + Math.round(kmEstimate / 25);
-    closeBookingModal();
-    celebrate('✓', 'Réservation confirmée !', `+${xpGained} XP`,
-      destinations.length > 0 ? `Direction : ${destinations[0].name}` : 'Bonne route !');
-    setTimeout(() => { const nb = checkNewBadges(); nb.forEach(b => showToast(`Badge débloqué : ${b.label}`)); }, 2800);
-  } catch(e) { showToast('Erreur — réessayez'); }
-}
-
-
-function showOnboardingStep(n) {
-  document.querySelectorAll('.ob-step').forEach(s => s.classList.add('hidden'));
-  document.getElementById(`ob-step-${n}`)?.classList.remove('hidden');
-  if (n === 2) {
-    const create = document.querySelectorAll('#ob-pin-create input');
-    const confirm = document.querySelectorAll('#ob-pin-confirm input');
-    setupPinInputs(create, () => confirm[0].focus());
-    setupPinInputs(confirm, obStep2Advance);
-    setTimeout(() => create[0].focus(), 300);
-  }
-  if (n === 3) {
-    const pins = document.querySelectorAll('#ob-user-pin input');
-    setupPinInputs(pins, obStep3Advance);
-    setTimeout(() => document.getElementById('ob-name')?.focus(), 300);
-  }
-  if (n === 4) {
-    selectedCarEmoji = '🚗';
-    document.querySelectorAll('.ob-emoji-btn').forEach(b => b.classList.remove('active'));
-    const firstBtn = document.querySelector('#ob-step-4 .ob-emoji-btn');
-    if (firstBtn) firstBtn.classList.add('active');
-  }
-}
-
-// ==========================================
-// WELCOME / LOGIN / SIGNUP FLOW
-// ==========================================
-function showWelcomeScreen() {
-  document.getElementById('app-header').style.display = 'none';
-  document.getElementById('app-main').style.display = 'none';
-  document.getElementById('login-overlay').classList.add('hidden');
-  document.getElementById('signup-overlay').classList.add('hidden');
-  document.getElementById('welcome-screen').style.display = 'flex';
-}
-
-// ---- LOGIN ----
-function connectUser() {
-  document.getElementById('welcome-screen').style.display = 'none';
-  const emailEl = document.getElementById('login-email');
-  if (emailEl) emailEl.value = '';
-  document.querySelectorAll('#login-pin input').forEach(i => i.value = '');
-  document.getElementById('login-error').textContent = '';
-  document.getElementById('login-overlay').classList.remove('hidden');
-  const pins = document.querySelectorAll('#login-pin input');
-  setupPinInputs(pins, loginUser);
-  setTimeout(() => document.getElementById('login-email')?.focus(), 300);
-}
-
-async function loginUser() {
-  const email = (document.getElementById('login-email')?.value || '').trim().toLowerCase();
-  const pin = Array.from(document.querySelectorAll('#login-pin input')).map(i => i.value.replace(/\D/g, '')).join('');
-  const errEl = document.getElementById('login-error');
-  if (!email || !email.includes('@')) { errEl.textContent = 'Email invalide'; return; }
-  if (pin.length < 4) { errEl.textContent = 'Entrez votre code à 4 chiffres'; return; }
-  errEl.textContent = '';
-  try {
-    const snap = await db.collection('users').where('email', '==', email).get();
-    if (snap.empty) { errEl.textContent = 'Email introuvable'; return; }
-    const doc = snap.docs[0];
-    const data = doc.data();
-    if (String(data.pin) !== pin) { errEl.textContent = 'Code incorrect'; return; }
-    const familyId = data.familyId || null;
-    let name = data.name || '';
-    let photo = data.photo || null;
-    if (familyId) {
-      try {
-        const memberDoc = await db.collection('families').doc(familyId).collection('members').doc(doc.id).get();
-        if (memberDoc.exists) {
-          name  = memberDoc.data().name  || name;
-          photo = memberDoc.data().photo || photo;
-        }
-      } catch(e) { /* fallback to global data */ }
-    }
-    currentUser = { id: doc.id, name, email: data.email, photo, familyId };
-    localStorage.setItem('famcar_user', JSON.stringify(currentUser));
-    document.getElementById('login-overlay').classList.add('hidden');
-    if (!familyId) {
-      await runMigrationIfNeeded();
-    } else {
-      loadCars();
-      enterApp();
-      showToast(`Bonjour ${currentUser.name} !`);
-    }
-  } catch(e) { errEl.textContent = 'Erreur — réessayez'; }
-}
-
-// ---- SIGNUP ----
-let suTempPhoto = null;
-let suInviteUrl = '';
-
-function startSignup() {
-  document.getElementById('welcome-screen').style.display = 'none';
-  suTempPhoto = null;
-  suInviteUrl = '';
-  suPendingFamilyId = null;
-  document.getElementById('signup-overlay').classList.remove('hidden');
-  showSignupStep(1);
-}
-
-function showSignupStep(id) {
-  document.querySelectorAll('.su-step').forEach(s => s.classList.add('hidden'));
-  document.getElementById(`su-step-${id}`)?.classList.remove('hidden');
-  if (id === '2b' || id === 2) {
-    // nothing extra
-  }
-  if (id === 3) {
-    suTempPhoto = null;
-    const prev = document.getElementById('su-photo-preview');
-    if (prev) { prev.innerHTML = '📷'; prev.classList.remove('has-photo'); }
-    document.querySelectorAll('#su-name,#su-email').forEach(el => { if (el) el.value = ''; });
-    document.querySelectorAll('#su-user-pin input').forEach(i => i.value = '');
-    document.getElementById('su-profile-error').textContent = '';
-    const pins = document.querySelectorAll('#su-user-pin input');
-    setupPinInputs(pins, signupProfileAdvance);
-    setTimeout(() => document.getElementById('su-name')?.focus(), 300);
-  }
-}
-
-function signupChooseJoin() {
-  document.querySelectorAll('.su-step').forEach(s => s.classList.add('hidden'));
-  document.getElementById('su-step-2a').classList.remove('hidden');
-  document.getElementById('su-invite-url').value = '';
-  document.getElementById('su-join-error').textContent = '';
-  setTimeout(() => document.getElementById('su-invite-url')?.focus(), 300);
-}
-
-function signupChooseCreate() {
-  document.querySelectorAll('.su-step').forEach(s => s.classList.add('hidden'));
-  document.getElementById('su-step-2b').classList.remove('hidden');
-  document.getElementById('su-family-name').value = '';
-  document.querySelectorAll('#su-family-pin input, #su-family-pin-confirm input').forEach(i => i.value = '');
-  document.getElementById('su-create-error').textContent = '';
-  const createPins = document.querySelectorAll('#su-family-pin input');
-  const confirmPins = document.querySelectorAll('#su-family-pin-confirm input');
-  setupPinInputs(createPins, () => confirmPins[0].focus());
-  setupPinInputs(confirmPins, signupCreateAdvance);
-  setTimeout(() => document.getElementById('su-family-name')?.focus(), 300);
-}
-
-async function signupJoinAdvance() {
-  const url = (document.getElementById('su-invite-url')?.value || '').trim();
-  const errEl = document.getElementById('su-join-error');
-  if (!url) { errEl.textContent = 'Collez le lien d\'invitation'; return; }
-  let code = '';
-  try {
-    const u = new URL(url);
-    code = u.searchParams.get('join') || '';
-  } catch(e) { errEl.textContent = 'Lien invalide'; return; }
-  if (!code) { errEl.textContent = 'Lien invalide — paramètre ?join= manquant'; return; }
-  errEl.textContent = '';
-  try {
-    const snap = await db.collection('families').where('inviteCode', '==', code).limit(1).get();
-    if (snap.empty) { errEl.textContent = 'Lien invalide ou expiré'; return; }
-    suPendingFamilyId = snap.docs[0].id;
-    showSignupStep(3);
-  } catch(e) { errEl.textContent = 'Erreur — réessayez'; }
-}
-
-function generateInviteCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = '';
-  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
-  return code;
-}
-
-async function signupCreateAdvance() {
-  const familyName = (document.getElementById('su-family-name')?.value || '').trim();
-  const pin = Array.from(document.querySelectorAll('#su-family-pin input')).map(i => i.value.replace(/\D/g, '')).join('');
-  const confirm = Array.from(document.querySelectorAll('#su-family-pin-confirm input')).map(i => i.value.replace(/\D/g, '')).join('');
-  const errEl = document.getElementById('su-create-error');
-  if (!familyName) { errEl.textContent = 'Entrez un nom pour votre famille'; return; }
-  if (pin.length < 4) { errEl.textContent = 'Entrez le code familial (4 chiffres)'; return; }
-  if (pin !== confirm) { errEl.textContent = 'Les codes ne correspondent pas'; return; }
-  errEl.textContent = '';
-  const inviteCode = generateInviteCode();
-  suInviteUrl = `${location.origin}${location.pathname}?join=${inviteCode}`;
-  try {
-    const familyDocRef = await db.collection('families').add({
-      name: familyName, pin, inviteCode,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    suPendingFamilyId = familyDocRef.id;
-    document.querySelectorAll('.su-step').forEach(s => s.classList.add('hidden'));
-    document.getElementById('su-step-2b-link').classList.remove('hidden');
-    document.getElementById('su-invite-display').textContent = suInviteUrl;
-  } catch(e) { errEl.textContent = 'Erreur — réessayez'; }
-}
-
-function copyInviteLink() {
-  navigator.clipboard?.writeText(suInviteUrl).then(() => showToast('Lien copié !')).catch(() => showToast(suInviteUrl));
-}
-
-async function loadAndCopyInviteLink() {
-  const el = document.getElementById('invite-link-display');
-  try {
-    const famDoc = await familyRef().get();
-    let code = famDoc.exists && famDoc.data().inviteCode;
-    if (!code) {
-      code = generateInviteCode();
-      await familyRef().update({ inviteCode: code });
-    }
-    const url = `${location.origin}${location.pathname}?join=${code}`;
-    el.textContent = url;
-    navigator.clipboard?.writeText(url).then(() => showToast('Lien copié !')).catch(() => showToast('Lien affiché ci-dessus'));
-  } catch(e) { el.textContent = 'Erreur de chargement.'; }
-}
-
-function handleSignupPhoto(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const size = 120; canvas.width = size; canvas.height = size;
-      const ctx = canvas.getContext('2d');
-      const min = Math.min(img.width, img.height);
-      ctx.drawImage(img, (img.width - min)/2, (img.height - min)/2, min, min, 0, 0, size, size);
-      suTempPhoto = canvas.toDataURL('image/jpeg', 0.6);
-      const preview = document.getElementById('su-photo-preview');
-      if (preview) { preview.innerHTML = `<img src="${suTempPhoto}" alt="">`; preview.classList.add('has-photo'); }
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-async function signupProfileAdvance() {
-  const name = (document.getElementById('su-name')?.value || '').trim();
-  const email = (document.getElementById('su-email')?.value || '').trim().toLowerCase();
-  const pin = Array.from(document.querySelectorAll('#su-user-pin input')).map(i => i.value.replace(/\D/g, '')).join('');
-  const errEl = document.getElementById('su-profile-error');
-  if (!name) { errEl.textContent = 'Entrez votre prénom'; return; }
-  if (!email || !email.includes('@')) { errEl.textContent = 'Email invalide'; return; }
-  if (pin.length < 4) { errEl.textContent = 'Entrez votre code secret (4 chiffres)'; return; }
-  errEl.textContent = '';
-  try {
-    const existing = await db.collection('users').where('email', '==', email).get();
-    if (!existing.empty) { errEl.textContent = 'Cet email est déjà utilisé'; return; }
-    const ref = await db.collection('users').add({
-      email, pin, familyId: suPendingFamilyId,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    await db.collection('families').doc(suPendingFamilyId).collection('members').doc(ref.id).set({
-      name, email, photo: suTempPhoto || null,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    currentUser = { id: ref.id, name, email, photo: suTempPhoto || null, familyId: suPendingFamilyId };
-    localStorage.setItem('famcar_user', JSON.stringify(currentUser));
-    document.getElementById('signup-overlay').classList.add('hidden');
-    loadCars();
-    enterApp();
-    celebrate('🎉', `Bienvenue ${name} !`, '+50 XP', 'Tu fais partie de la famille !');
-  } catch(e) { errEl.textContent = 'Erreur — réessayez'; }
-}
-
-// ==========================================
-// CAR ONBOARDING
-// ==========================================
-let selectedCarEmoji = '🚗';
-
-function selectCarEmoji(btn, emoji) {
-  selectedCarEmoji = emoji;
-  document.querySelectorAll('.ob-emoji-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-}
-
-async function obStep4Advance() {
-  const name = (document.getElementById('ob-car-name')?.value.trim()) || 'Voiture familiale';
-  const plaque = (document.getElementById('ob-car-plaque')?.value.trim().toUpperCase()) || '';
-  const errEl = document.getElementById('ob-step4-error');
-  errEl.textContent = '';
-  try {
-    if (selectedCar) {
-      await familyRef().collection('cars').doc(selectedCar).update({ name, emoji: selectedCarEmoji, plaque });
-      const car = cars.find(c => c.id === selectedCar);
-      if (car) Object.assign(car, { name, emoji: selectedCarEmoji, plaque });
-    }
-    showOnboardingStep(5);
-  } catch (e) { errEl.textContent = 'Erreur — réessayez'; }
-}
-
-async function obStep2Advance() {
-  const create = Array.from(document.querySelectorAll('#ob-pin-create input')).map(i => i.value.replace(/\D/g, '')).join('');
-  const confirm = Array.from(document.querySelectorAll('#ob-pin-confirm input')).map(i => i.value.replace(/\D/g, '')).join('');
-  const errEl = document.getElementById('ob-pin-error');
-  if (create.length < 4) { errEl.textContent = 'Entrez 4 chiffres'; return; }
-  if (create !== confirm) { errEl.textContent = 'Les codes ne correspondent pas'; return; }
-  errEl.textContent = '';
-  try {
-    const familyDocRef = await db.collection('families').add({
-      pin: create, inviteCode: generateInviteCode(),
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    suPendingFamilyId = familyDocRef.id;
-    showOnboardingStep(3);
-  } catch (e) { errEl.textContent = 'Erreur — réessayez'; }
-}
-
-async function obStep3Advance() {
-  const name = document.getElementById('ob-name')?.value.trim() || '';
-  const email = document.getElementById('ob-email')?.value.trim() || '';
-  const pin = Array.from(document.querySelectorAll('#ob-user-pin input')).map(i => i.value.replace(/\D/g, '')).join('');
-  const errEl = document.getElementById('ob-step3-error');
-  if (!name) { errEl.textContent = 'Entrez votre prénom'; return; }
-  if (!email || !email.includes('@')) { errEl.textContent = 'Email invalide'; return; }
-  if (pin.length < 4) { errEl.textContent = 'Entrez votre code à 4 chiffres'; return; }
-  errEl.textContent = '';
-  try {
-    const existing = await db.collection('users').where('email', '==', email).get();
-    if (!existing.empty) { errEl.textContent = 'Cet email est déjà utilisé'; return; }
-    const ref = await db.collection('users').add({
-      email, pin, familyId: suPendingFamilyId,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    await db.collection('families').doc(suPendingFamilyId).collection('members').doc(ref.id).set({
-      name, email, photo: tempPhoto || null,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    currentUser = { id: ref.id, name, email, photo: tempPhoto || null, familyId: suPendingFamilyId };
-    localStorage.setItem('famcar_user', JSON.stringify(currentUser));
-    showOnboardingStep(4);
-  } catch (e) { errEl.textContent = 'Erreur — réessayez'; }
-}
-
-function finishOnboarding() {
-  document.getElementById('onboarding-overlay').classList.add('hidden');
-  enterApp();
-  celebrate('🚗', `Bienvenue ${currentUser?.name || ''} !`, '+50 XP', 'La famille est prête à prendre la route !');
-}
-
-// ==========================================
-// MIGRATION HELPERS
-// ==========================================
-function showMigrationBanner() {
-  const el = document.getElementById('migration-overlay');
-  if (el) el.style.display = 'flex';
-  return el;
-}
-
-function hideMigrationBanner(el) {
-  if (el) el.style.display = 'none';
-}
-
-async function runMigrationIfNeeded() {
-  const banner = showMigrationBanner();
-  try {
-    // 1. Check if migration already completed for this user (idempotency guard)
-    const userDoc = await db.collection('users').doc(currentUser.id).get();
-    const existingFamilyId = userDoc.exists ? userDoc.data().familyId : null;
-
-    let familyId;
-    if (existingFamilyId) {
-      // Migration already stamped familyId on this user — just resume from there
-      familyId = existingFamilyId;
-    } else {
-      // No family yet — read legacy config and create one
-      const configDoc = await db.collection('config').doc('access').get();
-      const configData = configDoc.exists ? configDoc.data() : {};
-      const familyDocRef = await db.collection('families').add({
-        name: configData.familyName || 'Ma famille',
-        pin:  configData.pin || '',
-        inviteCode: configData.inviteCode || generateInviteCode(),
-        migratedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      familyId = familyDocRef.id;
-    }
-
-    // 2. Copy cars only if the subcollection is still empty (partial migration guard)
-    const existingCarsSnap = await db.collection('families').doc(familyId).collection('cars').limit(1).get();
-    if (existingCarsSnap.empty) {
-      const carsSnap = await db.collection('cars').get();
-      for (const carDoc of carsSnap.docs) {
-        await db.collection('families').doc(familyId).collection('cars').doc(carDoc.id).set(carDoc.data());
-      }
-      // Copy bookings together with cars (both or neither)
-      const bookingsSnap = await db.collection('bookings').get();
-      for (const bDoc of bookingsSnap.docs) {
-        await db.collection('families').doc(familyId).collection('bookings').doc(bDoc.id).set(bDoc.data());
-      }
-    }
-
-    // 3. Stamp familyId only on users that don't have it yet + create member docs
-    const usersSnap = await db.collection('users').get();
-    for (const uDoc of usersSnap.docs) {
-      const ud = uDoc.data();
-      if (!ud.familyId) {
-        await db.collection('families').doc(familyId).collection('members').doc(uDoc.id).set({
-          name:  ud.name  || '',
-          email: ud.email || '',
-          photo: ud.photo || null,
-          createdAt: ud.createdAt || null
-        });
-        await db.collection('users').doc(uDoc.id).update({ familyId });
-      }
-    }
-
-    // 4. Update currentUser in memory and localStorage
-    currentUser.familyId = familyId;
-    localStorage.setItem('famcar_user', JSON.stringify(currentUser));
-
-    hideMigrationBanner(banner);
-    loadCars();
-    enterApp();
-    showToast('Migration terminée — bienvenue dans la nouvelle version !');
-  } catch (e) {
-    hideMigrationBanner(banner);
-    console.error('Migration failed:', e);
-    showWelcomeScreen();
-    setTimeout(() => showToast('Erreur migration : ' + (e.message || String(e))), 300);
-  }
-}
-
-// ==========================================
-// INIT
-// ==========================================
-
-// Lien d'invitation : ?join= → pré-remplir le signup
-const _joinCode = new URLSearchParams(location.search).get('join');
-
-document.addEventListener('DOMContentLoaded', () => {
-  if (currentUser?.familyId) {
-    loadCars();
-    enterApp();
-  } else if (currentUser) {
-    // Logged-in user without familyId → needs one-time migration
-    runMigrationIfNeeded();
-  } else {
-    showWelcomeScreen();
-    if (_joinCode) {
-      startSignup();
-      signupChooseJoin();
-      const urlInput = document.getElementById('su-invite-url');
-      if (urlInput) urlInput.value = `${location.origin}${location.pathname}?join=${_joinCode}`;
-    }
-  }
-});
-</script>
 
 <!-- ===== Onboarding Wizard ===== -->
 <!-- Welcome Screen -->
 <div id="welcome-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:200;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px">
-  <div style="font-size:64px;margin-bottom:16px">🚗</div>
-  <h1 style="font-size:32px;margin-bottom:8px">FamCar</h1>
-  <p style="color:var(--text-light);font-size:16px;margin-bottom:48px;text-align:center">Gérez la voiture familiale<br>simplement, ensemble.</p>
+  <div style="font-size:64px;margin-bottom:16px">🏠</div>
+  <h1 style="font-size:32px;margin-bottom:8px">FamResa</h1>
+  <p style="color:var(--text-light);font-size:16px;margin-bottom:48px;text-align:center">Gérez vos ressources familiales<br>simplement, ensemble.</p>
   <div style="width:100%;max-width:320px">
     <button class="btn btn-primary" onclick="connectUser()">Se connecter</button>
     <button class="btn btn-outline" onclick="startSignup()">S'inscrire</button>
@@ -3103,7 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="ob-fields">
       <div class="input-group" style="margin-bottom:0">
         <label>Lien d'invitation</label>
-        <input type="url" id="su-invite-url" placeholder="https://combel-co.github.io/Resa-voiture/?join=..." autocomplete="off">
+        <input type="url" id="su-invite-url" placeholder="https://...?join=..." autocomplete="off">
       </div>
     </div>
     <div class="lock-error" id="su-join-error"></div>
@@ -3193,13 +515,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </div>
 
+<!-- Legacy Onboarding Wizard (first-time setup) -->
 <div id="onboarding-overlay" class="ob-overlay hidden">
 
   <!-- Step 1: Welcome -->
   <div class="ob-step ob-card" id="ob-step-1">
-    <div class="ob-emoji">🚗</div>
-    <h1 style="font-size:32px;margin-bottom:8px">FamCar</h1>
-    <p style="color:var(--text-light);margin-bottom:40px;font-size:16px">Gérez la voiture familiale<br>simplement, ensemble.</p>
+    <div class="ob-emoji">🏠</div>
+    <h1 style="font-size:32px;margin-bottom:8px">FamResa</h1>
+    <p style="color:var(--text-light);margin-bottom:40px;font-size:16px">Gérez vos ressources familiales<br>simplement, ensemble.</p>
     <button class="btn btn-primary" style="width:100%" onclick="showOnboardingStep(2)">Commencer →</button>
   </div>
 
@@ -3214,7 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
     <div class="ob-emoji">🔒</div>
     <h2 style="margin-bottom:6px">Code familial</h2>
-    <p style="color:var(--text-light);margin-bottom:24px;font-size:14px">Ce code protège l'accès à l'application.<br>Partagez-le avec tous les conducteurs.</p>
+    <p style="color:var(--text-light);margin-bottom:24px;font-size:14px">Ce code protège l'accès à l'application.<br>Partagez-le avec tous les membres.</p>
     <div class="ob-fields">
       <div>
         <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px">Choisissez un code à 4 chiffres</label>
@@ -3249,7 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="ob-dot"></div>
     </div>
     <div class="ob-emoji">👤</div>
-    <h2 style="margin-bottom:6px">Premier conducteur</h2>
+    <h2 style="margin-bottom:6px">Premier membre</h2>
     <p style="color:var(--text-light);margin-bottom:20px;font-size:14px">Créez votre profil pour commencer.</p>
     <div class="ob-fields">
       <div class="input-group" style="margin-bottom:0">
@@ -3326,17 +649,49 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
     <div class="ob-emoji">🎉</div>
     <h2 style="margin-bottom:8px">Famille créée !</h2>
-    <p style="color:var(--text-light);margin-bottom:40px;font-size:16px">Vous êtes prêt·e à réserver<br>la voiture familiale.</p>
-    <button class="btn btn-primary" style="width:100%" onclick="finishOnboarding()">Découvrir FamCar →</button>
+    <p style="color:var(--text-light);margin-bottom:40px;font-size:16px">Vous êtes prêt·e à réserver<br>vos ressources familiales.</p>
+    <button class="btn btn-primary" style="width:100%" onclick="finishOnboarding()">Découvrir FamResa →</button>
   </div>
 
 </div>
 
 <!-- Update banner -->
-<div id="sw-update-banner" style="display:none;position:fixed;bottom:80px;left:12px;right:12px;z-index:9999;background:#1a1a1a;color:#fff;border-radius:14px;padding:14px 16px;display:none;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,0.25);">
+<div id="sw-update-banner" style="display:none;position:fixed;bottom:80px;left:12px;right:12px;z-index:9999;background:#1a1a1a;color:#fff;border-radius:14px;padding:14px 16px;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,0.25);">
   <span style="font-size:14px;font-weight:500">Nouvelle version disponible</span>
   <button onclick="swApplyUpdate()" style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Actualiser</button>
 </div>
+
+<!-- Migration overlay -->
+<div id="migration-overlay" style="display:none;position:fixed;inset:0;background:var(--bg, white);z-index:600;flex-direction:column;align-items:center;justify-content:center;gap:20px">
+  <div class="spinner" style="width:36px;height:36px;border-width:3px"></div>
+  <p style="font-size:16px;font-weight:500;color:var(--text, #1a1a1a)">Migration des données en cours…</p>
+  <p style="font-size:13px;color:var(--text-light, #888)">Cela ne prend que quelques secondes</p>
+</div>
+
+<!-- JS modules (order matters) -->
+<script src="src/infra/firebase/firebase.client.js"></script>
+<script src="src/infra/firebase/firebase.mapper.js"></script>
+<script src="js/firebase.js"></script>
+<script src="js/app.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/xp.js"></script>
+<script src="js/celebration.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/fuel.js"></script>
+<script src="src/modules/reservation/reservation.repository.js"></script>
+<script src="src/modules/reservation/reservation.service.js"></script>
+<script src="js/booking.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/leaderboard.js"></script>
+<script src="js/history.js"></script>
+<script src="js/profile.js"></script>
+<script src="js/resources.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/stay.js"></script>
+<script src="js/checklist.js"></script>
+<script src="js/events.js"></script>
+<script src="js/guide.js"></script>
+<script src="js/migration.js"></script>
 
 <script>
 if ('serviceWorker' in navigator) {
@@ -3345,15 +700,12 @@ if ('serviceWorker' in navigator) {
       const newSW = reg.installing;
       newSW.addEventListener('statechange', () => {
         if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-          // New version ready — show banner
           document.getElementById('sw-update-banner').style.display = 'flex';
           window._pendingSW = newSW;
         }
       });
     });
   });
-
-  // When new SW takes control, reload the page
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     window.location.reload();
   });
@@ -3366,12 +718,10 @@ function swApplyUpdate() {
 }
 </script>
 
-<!-- Migration overlay (shown during one-time data migration) -->
-<div id="migration-overlay" style="display:none;position:fixed;inset:0;background:var(--bg, white);z-index:600;flex-direction:column;align-items:center;justify-content:center;gap:20px">
-  <div class="spinner" style="width:36px;height:36px;border-width:3px"></div>
-  <p style="font-size:16px;font-weight:500;color:var(--text, #1a1a1a)">Migration des données en cours…</p>
-  <p style="font-size:13px;color:var(--text-light, #888)">Cela ne prend que quelques secondes</p>
+<!-- ===== RESOURCE MANAGE PAGE ===== -->
+<div id="resource-manage-overlay" class="rm-overlay hidden">
+  <div id="resource-manage-content"></div>
 </div>
+
 </body>
 </html>
-
