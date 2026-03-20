@@ -91,6 +91,12 @@ function switchTab(tab) {
     document.getElementById(`tab-${name}`)?.classList.toggle('active', name === normalizedTab);
     document.getElementById(`nav-${name}`)?.classList.toggle('active', name === normalizedTab);
   });
+  // Hide header banner and resource tabs on profile tab
+  const appHeader = document.getElementById('app-header');
+  const resourceTabs = document.getElementById('resource-tabs');
+  if (appHeader) appHeader.style.display = normalizedTab === 'history' ? 'none' : '';
+  if (resourceTabs) resourceTabs.style.display = normalizedTab === 'history' ? 'none' : '';
+
   if (normalizedTab === 'leaderboard' || normalizedTab === 'dashboard') renderExperiencePanels();
   if (normalizedTab === 'history') renderProfileTab();
 }
