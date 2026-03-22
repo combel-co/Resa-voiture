@@ -122,33 +122,37 @@
   /* ═══════════════════════════════════════════
      CALENDAR
      ═══════════════════════════════════════════ */
-  /* ---- MONTH NAV ---- */
-  .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; gap: 10px; }
-
-  .month-center { flex: 1; text-align: center; min-width: 0; }
-
-  .month-title {
-    font-family: 'DM Sans', sans-serif; font-size: 26px;
-    font-weight: 500; letter-spacing: -0.5px; text-transform: capitalize;
+  /* ---- CALENDAR TAB — scrollable layout ---- */
+  #tab-calendar {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
   }
 
-
-  .month-btn {
-    width: 40px; height: 40px; border-radius: 50%;
-    border: 1px solid var(--border); background: white;
-    cursor: pointer; display: flex; align-items: center;
-    justify-content: center; font-size: 18px;
-    transition: all 0.15s; color: var(--text);
-  }
-  .month-btn:hover { background: #f5f5f5; }
-  .month-btn.today-btn {
-    width: auto;
-    border-radius: 999px;
-    padding: 0 12px;
-    font-size: 13px;
-    font-weight: 600;
+  .cal-sticky-header {
+    flex-shrink: 0;
+    background: white;
+    padding: 8px 16px 0;
+    z-index: 10;
   }
 
+  .cal-scroll-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 16px 16px;
+  }
+
+  .cal-month-block { margin-bottom: 16px; }
+
+  .cal-month-label {
+    font-size: 14px; font-weight: 700; text-transform: capitalize;
+    padding: 12px 0 8px; color: var(--text);
+  }
 
   /* ---- CALENDAR GRID ---- */
   .cal-header {
@@ -405,12 +409,6 @@
   }
   .bottom-nav button.active { background: var(--accent-light); color: var(--accent); }
 
-  .calendar-hint {
-    margin: -6px 0 10px;
-    text-align: center;
-    color: var(--text-light);
-    font-size: 12px;
-  }
 
   .profile-row {
     display:flex;
@@ -1106,8 +1104,6 @@
     main { padding: 0 14px 20px; }
     .resource-tabs { margin-left: -14px; margin-right: -14px; padding-left: 14px; padding-right: 14px; }
     :root { --header-h: 77px; }  /* mobile: padding 16+16 + content 44 + border 1 */
-    .month-title { font-size: 22px; }
-    .month-btn.today-btn { padding: 0 10px; font-size: 12px; }
     .cal-day { font-size: 13px; border-radius: 10px; height: 48px; padding-top: 7px; padding-bottom: 18px; }
   }
 
