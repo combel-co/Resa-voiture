@@ -1,69 +1,83 @@
 // ==========================================
-// CALENDAR RENDER
+// CALENDAR RENDER — scrollable multi-month
 // ==========================================
+const CAL_HORIZON_MONTHS = 13;
+
 function renderCalendar() {
   const grid = document.getElementById('cal-grid');
-  const titleEl = document.getElementById('month-title');
-  const date = new Date(currentYear, currentMonth, 1);
-  titleEl.textContent = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  if (!grid) return;
 
-  let firstDay = date.getDay() - 1;
-  if (firstDay < 0) firstDay = 6;
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   const today = new Date(); today.setHours(0,0,0,0);
-
   let html = '';
 
-  // Empty cells before first day
-  for (let i = 0; i < firstDay; i++) html += '<div class="cal-day empty"></div>';
+  for (let m = 0; m < CAL_HORIZON_MONTHS; m++) {
+    const d = new Date(today.getFullYear(), today.getMonth() + m, 1);
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    let firstDay = d.getDay() - 1;
+    if (firstDay < 0) firstDay = 6;
 
-  // Day cells
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const cellDate = new Date(currentYear, currentMonth, d);
-    const dayOfWeek = cellDate.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const isToday = cellDate.getTime() === today.getTime();
-    const isPast = cellDate < today;
-    const booking = bookings[dateStr];
-    const isMine = booking && currentUser && booking.userId === currentUser.id;
+    const monthLabel = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 
-    let classes = ['cal-day'];
-    if (isWeekend) classes.push('weekend');
-    if (isToday) classes.push('today');
-    if (isPast) classes.push('past');
-    if (booking && isMine) classes.push('mine');
-    else if (booking) classes.push('booked');
+    html += `<div class="cal-month-block">`;
+    html += `<div class="cal-month-label">${monthLabel}</div>`;
+    html += `<div class="cal-grid">`;
 
-    let avatarHtml = '';
-    if (booking) {
-      if (booking.photo) {
-        avatarHtml = `<div class="booking-avatar"><img src="${booking.photo}" alt=""></div>`;
-      } else {
-        avatarHtml = `<div class="booking-avatar">${getInitials(booking.userName)}</div>`;
+    for (let i = 0; i < firstDay; i++) html += '<div class="cal-day empty"></div>';
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      const cellDate = new Date(year, month, day);
+      const dayOfWeek = cellDate.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const isToday = cellDate.getTime() === today.getTime();
+      const isPast = cellDate < today;
+      const booking = bookings[dateStr];
+      const isMine = booking && currentUser && booking.userId === currentUser.id;
+
+      let classes = ['cal-day'];
+      if (isWeekend) classes.push('weekend');
+      if (isToday) classes.push('today');
+      if (isPast) classes.push('past');
+      if (booking && isMine) classes.push('mine');
+      else if (booking) classes.push('booked');
+
+      let avatarHtml = '';
+      if (booking) {
+        if (booking.photo) {
+          avatarHtml = `<div class="booking-avatar"><img src="${booking.photo}" alt=""></div>`;
+        } else {
+          avatarHtml = `<div class="booking-avatar">${getInitials(booking.userName)}</div>`;
+        }
       }
+
+      html += `<div class="${classes.join(' ')}" onclick="onDayClick('${dateStr}', ${isPast})">
+        <span class="day-num">${day}</span>
+        ${avatarHtml}
+      </div>`;
     }
 
-    html += `<div class="${classes.join(' ')}" onclick="onDayClick('${dateStr}', ${isPast})">
-      <span class="day-num">${d}</span>
-      ${avatarHtml}
-    </div>`;
+    html += `</div></div>`;
   }
 
-  // Pad to 42 cells (6 rows) for consistent height
-  const totalCells = firstDay + daysInMonth;
-  for (let i = totalCells; i < 42; i++) html += '<div class="cal-day empty"></div>';
-
   grid.innerHTML = html;
-  renderKpis(daysInMonth);
+
+  const nowMonth = today.getMonth();
+  const nowYear = today.getFullYear();
+  const daysInCurrentMonth = new Date(nowYear, nowMonth + 1, 0).getDate();
+  renderKpis(daysInCurrentMonth);
   renderExperiencePanels();
 }
 
 function renderKpis(daysInMonth) {
+  const today = new Date();
+  const kpiYear = today.getFullYear();
+  const kpiMonth = today.getMonth();
   const res = resources.find(r => r.id === selectedResource);
+
   if (res && res.type === 'house') {
-    // House KPIs: séjours, occupation
-    const monthPrefix = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-`;
+    const monthPrefix = `${kpiYear}-${String(kpiMonth + 1).padStart(2, '0')}-`;
     const monthDateKeys = Object.keys(bookings).filter(d => d.startsWith(monthPrefix));
     const totalDaysBooked = monthDateKeys.length;
     const seen = new Set(); const uniqueBookings = [];
@@ -80,7 +94,7 @@ function renderKpis(daysInMonth) {
   }
 
   // Car KPIs (default)
-  const monthPrefix = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-`;
+  const monthPrefix = `${kpiYear}-${String(kpiMonth + 1).padStart(2, '0')}-`;
   const monthDateKeys = Object.keys(bookings).filter(d => d.startsWith(monthPrefix));
   const totalDaysBooked = monthDateKeys.length;
   const seen = new Set(); const uniqueBookings = [];
@@ -102,14 +116,10 @@ function renderKpis(daysInMonth) {
   document.getElementById('kpi-co2').textContent = String(estimatedCo2);
 }
 
-function prevMonth() { currentMonth--; if (currentMonth < 0) { currentMonth = 11; currentYear--; } renderCalendar(); }
-function nextMonth() { currentMonth++; if (currentMonth > 11) { currentMonth = 0; currentYear++; } renderCalendar(); }
 function goToToday() {
-  const now = new Date();
-  currentMonth = now.getMonth();
-  currentYear = now.getFullYear();
   switchTab('calendar');
-  renderCalendar();
+  const scrollBody = document.getElementById('cal-scroll-body');
+  if (scrollBody) scrollBody.scrollTop = 0;
   showToast("Retour à aujourd'hui");
 }
 
@@ -144,7 +154,6 @@ function onDayClick(dateStr, isPast) {
   if (booking) {
     const isMine = currentUser && booking.userId === currentUser.id;
     if (res && res.type === 'house') {
-      // House: show stay sheet
       showStaySheet(booking.reservationGroupId || booking.id, booking);
       return;
     }
@@ -190,18 +199,3 @@ function goToDashboardBooking() {
   switchTab('dashboard');
   openBookingModal();
 }
-
-// ==========================================
-// SWIPE TO CHANGE MONTH
-// ==========================================
-let touchStartX = 0;
-document.addEventListener('DOMContentLoaded', () => {
-  const grid = document.getElementById('cal-grid');
-  if (grid) {
-    grid.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
-    grid.addEventListener('touchend', e => {
-      const diff = e.changedTouches[0].clientX - touchStartX;
-      if (Math.abs(diff) > 60) { diff > 0 ? prevMonth() : nextMonth(); }
-    }, { passive: true });
-  }
-});

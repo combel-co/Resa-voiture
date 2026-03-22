@@ -202,29 +202,18 @@
   </section>
 
   <section class="tab-panel" id="tab-calendar">
-    <div class="month-nav">
-      <button class="month-btn" onclick="prevMonth()">‹</button>
-      <div class="month-center">
-        <div class="month-title" id="month-title"></div>
+    <div class="cal-sticky-header">
+      <div class="cal-header">
+        <div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div>
       </div>
-      <button class="month-btn" onclick="nextMonth()">›</button>
-      <button class="month-btn today-btn" type="button" onclick="goToToday()">Aujourd'hui</button>
     </div>
-
-    <div class="calendar-hint">Planning (lecture seule). Réservez depuis le Dashboard.</div>
-
-    <div class="cal-header">
-      <div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div>
-    </div>
-
-    <div class="cal-grid" id="cal-grid">
-      <div class="loading"><div class="spinner"></div> Chargement...</div>
-    </div>
-
-    <div class="legend" style="margin-bottom:130px">
-      <span><span class="legend-dot" style="background:var(--accent)"></span> Ma résa</span>
-      <span><span class="legend-dot" style="background:var(--accent-light);border:1px solid var(--accent)"></span> Réservé</span>
-      <span><span class="legend-dot" style="background:#f0f0f0"></span> Dispo</span>
+    <div class="cal-scroll-body" id="cal-scroll-body">
+      <div id="cal-grid"></div>
+      <div class="legend" style="margin-bottom:130px">
+        <span><span class="legend-dot" style="background:var(--accent)"></span> Ma résa</span>
+        <span><span class="legend-dot" style="background:var(--accent-light);border:1px solid var(--accent)"></span> Réservé</span>
+        <span><span class="legend-dot" style="background:#f0f0f0"></span> Dispo</span>
+      </div>
     </div>
   </section>
 
