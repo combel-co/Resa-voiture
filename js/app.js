@@ -72,10 +72,7 @@ async function loadFamilyName() {
         const doc = await familleRef(currentUser.familyId).get();
         if (doc.exists) name = doc.data().nom || doc.data().name || '';
       } catch(_) {}
-      if (!name) {
-        const doc = await db.collection('families').doc(currentUser.familyId).get();
-        if (doc.exists) name = doc.data().name || doc.data().nom || '';
-      }
+      // Legacy families fallback removed — migration copies to 'familles'
       _userFamilies = [{ id: currentUser.familyId, name: name || 'Ma famille' }];
     }
 

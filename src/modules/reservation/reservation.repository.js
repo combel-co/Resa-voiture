@@ -31,17 +31,9 @@ const reservationRepository = {
 
   /**
    * Delete a single reservation by ID.
-   * Also attempts deletion from the legacy families/{familyId}/bookings collection
-   * so that bookings created before the migration are fully removed.
    */
-  async delete(bookingId, familyId) {
+  async delete(bookingId) {
     await reservationsRef().doc(bookingId).delete();
-    if (familyId) {
-      try {
-        await db.collection('families').doc(familyId)
-          .collection('bookings').doc(bookingId).delete();
-      } catch (_) {}
-    }
   },
 
   /**
@@ -63,35 +55,21 @@ const reservationRepository = {
   },
 
   /**
-   * Count unique reservations linked to a resource across new and legacy fields.
+   * Count reservations linked to a resource.
    */
   async countByResourceId(resourceId) {
-    const [newSnap, legacySnap, carSnap] = await Promise.all([
-      reservationsRef().where('ressource_id', '==', resourceId).get().catch(() => ({ docs: [] })),
-      reservationsRef().where('resourceId', '==', resourceId).get().catch(() => ({ docs: [] })),
-      reservationsRef().where('carId', '==', resourceId).get().catch(() => ({ docs: [] })),
-    ]);
-
-    const ids = new Set();
-    [...(newSnap.docs || []), ...(legacySnap.docs || []), ...(carSnap.docs || [])].forEach((doc) => {
-      if (doc?.id) ids.add(doc.id);
-    });
-    return ids.size;
+    const snap = await reservationsRef()
+      .where('ressource_id', '==', resourceId).get();
+    return snap.size;
   },
 
   /**
-   * Count unique reservations for a given user across all resources.
+   * Count reservations for a given user.
    */
   async countByUserId(userId) {
-    const [newSnap, legacySnap] = await Promise.all([
-      reservationsRef().where('profil_id', '==', userId).get().catch(() => ({ docs: [] })),
-      reservationsRef().where('userId', '==', userId).get().catch(() => ({ docs: [] })),
-    ]);
-    const ids = new Set();
-    [...(newSnap.docs || []), ...(legacySnap.docs || [])].forEach(doc => {
-      if (doc?.id) ids.add(doc.id);
-    });
-    return ids.size;
+    const snap = await reservationsRef()
+      .where('profil_id', '==', userId).get();
+    return snap.size;
   },
 
   /**

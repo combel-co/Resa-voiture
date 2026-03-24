@@ -16,19 +16,7 @@ async function loadResources() {
       allResources = await getFamilleRessources(familyId);
     } catch(_) {}
 
-    if (allResources.length === 0) {
-      // Fallback: legacy families/{id}/resources then cars
-      try {
-        const snap = await db.collection('families').doc(familyId).collection('resources').get();
-        snap.forEach(d => allResources.push({ id: d.id, ...d.data() }));
-      } catch(_) {}
-    }
-    if (allResources.length === 0) {
-      try {
-        const snap = await db.collection('families').doc(familyId).collection('cars').get();
-        snap.forEach(d => allResources.push({ id: d.id, type: 'car', ...d.data() }));
-      } catch(_) {}
-    }
+    // Legacy fallback removed — migration copies data to 'ressources' collection
 
     // Normalise field names
     allResources = allResources.map(r => ({
@@ -49,31 +37,14 @@ async function loadResources() {
       myAccessEntries = await getMyResourceAccessEntries(currentUser.id, familyId);
     } catch(_) {}
 
-    if (myAccessEntries.length === 0) {
-      // Fallback: legacy resource_access
-      try {
-        const snap = await db.collection('resource_access').where('profileId', '==', currentUser.id).get();
-        snap.forEach(d => myAccessEntries.push(accesRessourceToJS(d.data(), d.id)));
-        myAccessEntries = myAccessEntries.filter(e => e.familyId === familyId || e.famille_id === familyId);
-      } catch(_) {}
-    }
+    // Legacy resource_access fallback removed — migration copies to 'acces_ressource'
 
     if (myAccessEntries.length === 0 && allResources.length > 0) {
       // No access records yet — determine role from family created_by
       let role = 'member';
       try {
-        let famDoc = null;
-        try {
-          const d = await db.collection('families').doc(familyId).get();
-          if (d.exists) famDoc = d;
-        } catch(_) {}
-        if (!famDoc) {
-          try {
-            const d = await familleRef(familyId).get();
-            if (d.exists) famDoc = d;
-          } catch(_) {}
-        }
-        if (famDoc && famDoc.data().created_by === currentUser.id) role = 'admin';
+        const d = await familleRef(familyId).get();
+        if (d.exists && d.data().created_by === currentUser.id) role = 'admin';
       } catch(_) {}
 
       // Try writing to new collection; silently ignore if not permitted yet
@@ -270,22 +241,6 @@ function selectResource(resourceId) {
 function subscribeBookings() {
   if (unsubscribe) unsubscribe();
 
-  // Two separate maps so neither listener clears the other's data
-  let _bookingsNew    = {};
-  let _bookingsLegacy = {};
-  let _readyNew     = false;
-  let _readyLegacy  = false;
-
-  function _rebuild() {
-    bookings = {};
-    // Legacy first, new data takes precedence (overwrites same dates)
-    Object.entries(_bookingsLegacy).forEach(([k, v]) => { bookings[k] = v; });
-    Object.entries(_bookingsNew).forEach(([k, v]) => { bookings[k] = v; });
-    renderCalendar();
-    renderExperiencePanels();
-    if (document.getElementById('booking-modal')?.classList.contains('open')) renderBmCalendar();
-  }
-
   function _expandToMap(d, map) {
     const start = d.startDate || d.date_debut;
     const end   = d.endDate   || d.date_fin || start;
@@ -300,82 +255,18 @@ function subscribeBookings() {
     } else if (d.date) { map[d.date] = d; }
   }
 
-  // New collection: reservations
-  let unsubNew = null;
-  try {
-    unsubNew = reservationsRef()
-      .where('ressource_id', '==', selectedResource)
-      .onSnapshot(snap => {
-        _bookingsNew = {};
-        snap.forEach(doc => _expandToMap(reservationToJS(doc.data(), doc.id), _bookingsNew));
-        _readyNew = true;
-        if (_readyLegacy) _rebuild();
-      }, err => {
-        console.warn('[reservations] snapshot error:', err);
-        _readyNew = true;
-        if (_readyLegacy) _rebuild();
-      });
-  } catch(_) { _readyNew = true; }
-
-  // Legacy collection: families/{id}/bookings
-  let unsubLegacy = null;
-  try {
-    const familyId = currentUser.familyId;
-    const legacyCol = db.collection('families').doc(familyId).collection('bookings');
-    // Subscribe by resourceId first, then carId for old bookings
-    unsubLegacy = legacyCol
-      .where('resourceId', '==', selectedResource)
-      .onSnapshot(snap => {
-        _bookingsLegacy = {};
-        snap.forEach(doc => _expandToMap({ id: doc.id, ...doc.data() }, _bookingsLegacy));
-        // Also pick up carId-only bookings
-        legacyCol.where('carId', '==', selectedResource).get().then(snap2 => {
-          snap2.forEach(doc => {
-            const d = { id: doc.id, ...doc.data() };
-            if (!d.resourceId) _expandToMap(d, _bookingsLegacy);
-          });
-          _readyLegacy = true;
-          if (_readyNew) _rebuild();
-        }).catch(() => { _readyLegacy = true; if (_readyNew) _rebuild(); });
-      }, err => {
-        console.warn('[bookings legacy] snapshot error:', err);
-        _readyLegacy = true;
-        if (_readyNew) _rebuild();
-      });
-  } catch(_) {
-    _readyLegacy = true;
-    if (_readyNew) _rebuild();
-  }
-
-  unsubscribe = () => {
-    if (unsubNew) unsubNew();
-    if (unsubLegacy) unsubLegacy();
-  };
-}
-
-function handleBookingsSnapshot(snap) {
-  bookings = {};
-  snap.forEach(doc => {
-    const d = { id: doc.id, ...doc.data() };
-    expandBookingToMap(d);
-  });
-  renderCalendar();
-  renderExperiencePanels();
-  if (document.getElementById('booking-modal')?.classList.contains('open')) renderBmCalendar();
-}
-
-function expandBookingToMap(d) {
-  if (d.startDate && d.endDate) {
-    let cur = new Date(d.startDate + 'T00:00:00');
-    const end = new Date(d.endDate + 'T00:00:00');
-    while (cur <= end) {
-      const ds = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
-      bookings[ds] = d;
-      cur.setDate(cur.getDate() + 1);
-    }
-  } else if (d.date) {
-    bookings[d.date] = d;
-  }
+  // Single listener on new-schema collection only
+  unsubscribe = reservationsRef()
+    .where('ressource_id', '==', selectedResource)
+    .onSnapshot(snap => {
+      bookings = {};
+      snap.forEach(doc => _expandToMap(reservationToJS(doc.data(), doc.id), bookings));
+      renderCalendar();
+      renderExperiencePanels();
+      if (document.getElementById('booking-modal')?.classList.contains('open')) renderBmCalendar();
+    }, err => {
+      console.warn('[reservations] snapshot error:', err);
+    });
 }
 
 function subscribeFuelReports() {

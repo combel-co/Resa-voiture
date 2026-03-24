@@ -5,19 +5,9 @@
 
 const accessRepository = {
   async listByResourceId(resourceId) {
-    const [newSnap, legacySnap] = await Promise.all([
-      accesRessourceRef().where('ressource_id', '==', resourceId).get().catch(() => ({ docs: [] })),
-      accesRessourceRef().where('resourceId', '==', resourceId).get().catch(() => ({ docs: [] })),
-    ]);
-
-    const seen = new Set();
-    return [...(newSnap.docs || []), ...(legacySnap.docs || [])]
-      .filter((doc) => {
-        if (!doc?.id || seen.has(doc.id)) return false;
-        seen.add(doc.id);
-        return true;
-      })
-      .map((doc) => accesRessourceToJS(doc.data(), doc.id));
+    const snap = await accesRessourceRef()
+      .where('ressource_id', '==', resourceId).get();
+    return snap.docs.map(doc => accesRessourceToJS(doc.data(), doc.id));
   },
 
   async updateStatus(accessId, status) {

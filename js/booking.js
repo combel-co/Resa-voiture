@@ -456,7 +456,7 @@ async function cancelStay(groupId) {
 
 async function cancelBooking(bookingId) {
   try {
-    await reservationService.cancel(bookingId, currentUser?.familyId);
+    await reservationService.cancel(bookingId);
     closeSheet();
     showToast('Réservation annulée');
   } catch(e) { showToast('Erreur — réessayez'); }

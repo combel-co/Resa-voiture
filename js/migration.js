@@ -6,11 +6,23 @@
 
 async function runV2MigrationIfNeeded() {
   if (!currentUser?.familyId) return;
+
+  // Fast path: localStorage cache
   if (localStorage.getItem('famresa_v2_migrated') === '1') return;
+
+  const familyId = currentUser.familyId;
+
+  // Check Firestore flag (survives browser/device changes)
+  try {
+    const familleDoc = await familleRef(familyId).get();
+    if (familleDoc.exists && familleDoc.data().v2_migrated === true) {
+      localStorage.setItem('famresa_v2_migrated', '1');
+      return;
+    }
+  } catch (_) {}
 
   console.log('[migration] Starting v2 schema migration...');
   try {
-    const familyId = currentUser.familyId;
 
     // ── 1. Migrate FAMILLE (families → familles) ──
     const oldFamDoc = await db.collection('families').doc(familyId).get();
@@ -170,7 +182,11 @@ async function runV2MigrationIfNeeded() {
     }
 
     localStorage.setItem('famresa_v2_migrated', '1');
-    console.log('[migration] v2 migration complete ✓');
+    // Persist flag in Firestore so other devices/browsers skip migration
+    try {
+      await familleRef(familyId).update({ v2_migrated: true });
+    } catch (_) {}
+    console.log('[migration] v2 migration complete');
   } catch (e) {
     console.error('[migration] v2 migration failed:', e);
     // Don't block the app — migration will retry on next load
