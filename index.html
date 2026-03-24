@@ -267,6 +267,11 @@
         <div class="pf-row-label">Aide & FAQ</div>
         <div class="pf-row-chevron">›</div>
       </div>
+      <div class="pf-settings-row" onclick="showErrorDashboard()">
+        <div class="pf-row-icon">📊</div>
+        <div class="pf-row-label">Dashboard erreurs (admin)</div>
+        <div class="pf-row-chevron">›</div>
+      </div>
     </div>
 
     <div class="pf-settings-group" style="margin-bottom:14px">
@@ -758,7 +763,7 @@
 <script src="js/ui.js?v=4" defer></script>
 <script src="js/xp.js?v=4" defer></script>
 <script src="js/celebration.js?v=4" defer></script>
-<script src="js/auth.js?v=13" defer></script>
+<script src="js/auth.js?v=14" defer></script>
 <script src="js/fuel.js?v=4" defer></script>
 <script src="src/modules/reservation/reservation.repository.js?v=4" defer></script>
 <script src="src/modules/reservation/reservation.service.js?v=4" defer></script>
@@ -774,7 +779,7 @@
 <script src="js/calendar.js?v=4" defer></script>
 <script src="js/history.js?v=4" defer></script>
 <script src="src/modules/profile/profile.service.js?v=1" defer></script>
-<script src="js/profile.js?v=4" defer></script>
+<script src="js/profile.js?v=5" defer></script>
 <script src="js/resources.js?v=4" defer></script>
 <script src="js/dashboard.js?v=4" defer></script>
 <script src="js/stay.js?v=4" defer></script>
@@ -841,6 +846,11 @@ function swApplyUpdate() {
 <!-- ===== RESOURCE MANAGE PAGE ===== -->
 <div id="resource-manage-overlay" class="rm-overlay hidden">
   <div id="resource-manage-content"></div>
+</div>
+
+<!-- Admin errors dashboard -->
+<div id="error-dashboard-overlay" class="rm-overlay hidden">
+  <div id="error-dashboard-content"></div>
 </div>
 
 </body>
