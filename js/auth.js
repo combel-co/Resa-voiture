@@ -225,6 +225,7 @@ async function loginUser() {
   if (!email || !email.includes('@')) { errEl.textContent = 'Email invalide'; return; }
   if (pin.length < 4) { errEl.textContent = 'Entrez votre code à 4 chiffres'; return; }
   errEl.textContent = '';
+  showSkeleton();
   let stage = 'start';
   const diag = { flow: 'loginUser', email, stage };
   try {
@@ -251,7 +252,7 @@ async function loginUser() {
       const newSnap = await profilsRef().where('email', '==', email).get();
       if (!newSnap.empty) {
         const d = newSnap.docs[0].data();
-        if (String(d.code_pin ?? d.pin) !== pin) { errEl.textContent = 'Code incorrect'; return; }
+        if (String(d.code_pin ?? d.pin) !== pin) { hideSkeleton(); errEl.textContent = 'Code incorrect'; return; }
         doc = newSnap.docs[0]; data = d;
         diag.source = 'profils';
       }
@@ -265,9 +266,9 @@ async function loginUser() {
       // Legacy path — users collection
       stage = 'query_users_by_email'; diag.stage = stage;
       const oldSnap = await db.collection('users').where('email', '==', email).get();
-      if (oldSnap.empty) { errEl.textContent = 'Email introuvable'; return; }
+      if (oldSnap.empty) { hideSkeleton(); errEl.textContent = 'Email introuvable'; return; }
       const d = oldSnap.docs[0].data();
-      if (String(d.pin) !== pin) { errEl.textContent = 'Code incorrect'; return; }
+      if (String(d.pin) !== pin) { hideSkeleton(); errEl.textContent = 'Code incorrect'; return; }
       doc = oldSnap.docs[0]; data = d;
       diag.source = 'users_legacy';
 
@@ -288,7 +289,7 @@ async function loginUser() {
       } catch (_) { /* non-blocking */ }
     }
 
-    if (!doc) { errEl.textContent = 'Email introuvable'; return; }
+    if (!doc) { hideSkeleton(); errEl.textContent = 'Email introuvable'; return; }
 
     const familyId = data.familyId || data.famille_id || null;
     let name = data.nom || data.name || '';
@@ -327,7 +328,7 @@ async function loginUser() {
       stage = 'load_resources'; diag.stage = stage;
       await loadResources();
       stage = 'enter_app'; diag.stage = stage;
-      enterApp();
+      enterApp('dashboard');
       showToast(`Bonjour ${currentUser.name} !`);
       if (_pendingResourceJoinCode) {
         await handleResourceJoinCode(_pendingResourceJoinCode);
@@ -335,6 +336,7 @@ async function loginUser() {
       }
     }
   } catch(e) {
+    hideSkeleton();
     diag.stage = stage;
     diag.errorCode = e?.code || '';
     diag.errorMessage = e?.message || String(e);
@@ -520,16 +522,15 @@ async function signupProfileAdvance() {
     currentUser = { id: ref.id, name, email, photo: suTempPhoto || null, familyId: suPendingFamilyId };
     localStorage.setItem('famcar_user', JSON.stringify(currentUser));
     document.getElementById('signup-overlay').classList.add('hidden');
+    showSkeleton();
+    await loadResources();
     if (_pendingResourceJoinCode) {
-      await loadResources();
       await handleResourceJoinCode(_pendingResourceJoinCode);
       _pendingResourceJoinCode = null;
-    } else {
-      loadResources();
     }
-    enterApp();
+    enterApp('dashboard');
     celebrate('🎉', `Bienvenue ${name} !`, '+50 XP', 'Tu fais partie de la famille !');
-  } catch(e) { console.error(e); errEl.textContent = 'Erreur — réessayez'; }
+  } catch(e) { hideSkeleton(); console.error(e); errEl.textContent = 'Erreur — réessayez'; }
 }
 
 // ==========================================
@@ -632,7 +633,7 @@ function showOnboardingStep(n) {
 
 function finishOnboarding() {
   document.getElementById('onboarding-overlay').classList.add('hidden');
-  enterApp();
+  enterApp('dashboard');
   celebrate('🚗', `Bienvenue ${currentUser?.name || ''} !`, '+50 XP', 'La famille est prête à prendre la route !');
 }
 
@@ -703,7 +704,7 @@ async function runMigrationIfNeeded() {
     // Run v2 schema migration after v1 family migration
     await runV2MigrationIfNeeded();
     await loadResources();
-    enterApp();
+    enterApp('dashboard');
     showToast('Migration terminée — bienvenue dans la nouvelle version !');
   } catch (e) {
     hideMigrationBanner(banner);
@@ -841,7 +842,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Ensure migration completes before loading resources
     await runV2MigrationIfNeeded();
     await loadResources();
-    enterApp();
+    enterApp('dashboard');
     if (_pendingResourceJoinCode) {
       await handleResourceJoinCode(_pendingResourceJoinCode);
       _pendingResourceJoinCode = null;
