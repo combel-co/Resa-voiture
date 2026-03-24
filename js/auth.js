@@ -1,7 +1,7 @@
 // ==========================================
 // AUTH — WELCOME / LOGIN / SIGNUP / PROFILE
 // ==========================================
-const AUTH_BUILD = 'auth-v13-20260324';
+const AUTH_BUILD = 'auth-v14-20260324';
 
 function showWelcomeScreen() {
   hideSplash();
@@ -77,6 +77,7 @@ async function _validateDiagAdminCode(inputCode) {
 
   return false;
 }
+window.verifyDiagAdminCode = _validateDiagAdminCode;
 
 window.openLoginDiagnosticSecure = async function openLoginDiagnosticSecure() {
   const code = window.prompt('Code admin requis');
@@ -149,6 +150,7 @@ function _recordAuthDiag(diag) {
       at: new Date().toISOString(),
       userAgent: navigator.userAgent,
       swControlled: !!navigator.serviceWorker?.controller,
+      familyId: currentUser?.familyId || diag?.familyId || null,
       firebaseInit: window.__firebaseInitState || null,
     };
     localStorage.setItem('famresa_last_login_diag', JSON.stringify(payload));
@@ -170,6 +172,7 @@ async function _persistAuthDiagToFirestore(payload) {
       errorCode: payload.errorCode || '',
       errorMessage: payload.errorMessage || '',
       email: payload.email || '',
+      familyId: payload.familyId || currentUser?.familyId || null,
       userAgent: payload.userAgent || '',
       swControlled: !!payload.swControlled,
       firebaseInit: payload.firebaseInit || null,
