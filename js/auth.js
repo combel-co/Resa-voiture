@@ -19,11 +19,63 @@ function connectUser() {
   if (emailEl) emailEl.value = '';
   document.querySelectorAll('#login-pin input').forEach(i => i.value = '');
   document.getElementById('login-error').textContent = '';
+  const diagBox = document.getElementById('login-diagnostic');
+  const diagText = document.getElementById('login-diagnostic-text');
+  if (diagBox) diagBox.style.display = 'none';
+  if (diagText) diagText.textContent = '';
   document.getElementById('login-overlay').classList.remove('hidden');
+  _setupLoginDiagGesture();
   const pins = document.querySelectorAll('#login-pin input');
   setupPinInputs(pins, loginUser);
   setTimeout(() => document.getElementById('login-email')?.focus(), 300);
 }
+
+let _loginDiagPressTimer = null;
+function _setupLoginDiagGesture() {
+  const title = document.getElementById('login-title');
+  if (!title || title.dataset.diagGestureBound === '1') return;
+  title.dataset.diagGestureBound = '1';
+
+  const start = () => {
+    clearTimeout(_loginDiagPressTimer);
+    _loginDiagPressTimer = setTimeout(() => {
+      window.toggleLoginDiagnostic();
+      showToast('Diagnostic activé');
+    }, 900);
+  };
+  const end = () => clearTimeout(_loginDiagPressTimer);
+
+  title.addEventListener('touchstart', start, { passive: true });
+  title.addEventListener('touchend', end, { passive: true });
+  title.addEventListener('touchcancel', end, { passive: true });
+  title.addEventListener('mousedown', start);
+  title.addEventListener('mouseup', end);
+  title.addEventListener('mouseleave', end);
+}
+
+function _renderLoginDiagnostic(payload) {
+  const diagBox = document.getElementById('login-diagnostic');
+  const diagText = document.getElementById('login-diagnostic-text');
+  if (!diagBox || !diagText) return;
+
+  if (!payload) {
+    diagText.textContent = 'Aucun diagnostic enregistré pour le moment. Réessayez puis copiez le diagnostic si le problème continue.';
+    return;
+  }
+
+  diagText.textContent = `Diagnostic ${payload.ref || 'n/a'}: ${payload.stage || 'unknown'}${payload.errorCode ? ` (${payload.errorCode})` : ''}. Vous pouvez copier ce message et me l’envoyer.`;
+}
+
+window.toggleLoginDiagnostic = function toggleLoginDiagnostic() {
+  const diagBox = document.getElementById('login-diagnostic');
+  if (!diagBox) return;
+  if (diagBox.style.display === 'block') {
+    diagBox.style.display = 'none';
+    return;
+  }
+  _renderLoginDiagnostic(window.showLastLoginDiagnostic());
+  diagBox.style.display = 'block';
+};
 
 function _isAuthDebugEnabled() {
   try {
@@ -48,6 +100,8 @@ function _stageReason(stage) {
     case 'query_profils_by_email':
     case 'query_users_by_email':
       return 'Impossible de vérifier le compte';
+    case 'firebase_ready_check':
+      return 'Initialisation Firebase incomplète (cache PWA probable)';
     case 'auto_create_profil':
       return 'Impossible d’initialiser le profil';
     case 'run_v1_migration':
@@ -83,7 +137,9 @@ function _recordAuthDiag(diag) {
     };
     localStorage.setItem('famresa_last_login_diag', JSON.stringify(payload));
     window.__famresaLastLoginDiag = payload;
+    return payload;
   } catch (_) {}
+  return null;
 }
 
 window.showLastLoginDiagnostic = function showLastLoginDiagnostic() {
@@ -98,6 +154,28 @@ window.showLastLoginDiagnostic = function showLastLoginDiagnostic() {
   }
 };
 
+window.copyLastLoginDiagnostic = async function copyLastLoginDiagnostic() {
+  const payload = window.showLastLoginDiagnostic();
+  if (!payload) {
+    showToast('Aucun diagnostic trouvé');
+    return;
+  }
+  const message = [
+    `Ref: ${payload.ref || '-'}`,
+    `Etape: ${payload.stage || '-'}`,
+    `Code: ${payload.errorCode || '-'}`,
+    `Message: ${payload.errorMessage || '-'}`,
+    `Date: ${payload.at || '-'}`,
+  ].join('\n');
+
+  try {
+    await navigator.clipboard.writeText(message);
+    showToast('Diagnostic copié ✓');
+  } catch (_) {
+    showToast(`Diagnostic: ${payload.ref || 'n/a'}`);
+  }
+};
+
 async function loginUser() {
   const email = (document.getElementById('login-email')?.value || '').trim().toLowerCase();
   const pin = Array.from(document.querySelectorAll('#login-pin input')).map(i => i.value.replace(/\D/g, '')).join('');
@@ -108,6 +186,11 @@ async function loginUser() {
   let stage = 'start';
   const diag = { flow: 'loginUser', email, stage };
   try {
+    stage = 'firebase_ready_check'; diag.stage = stage;
+    if (!window.firebase || !window.db) {
+      throw new Error('Firebase non initialisé (SDK ou cache PWA obsolète)');
+    }
+
     // Try new collection first; if permission denied/unavailable, fall through to legacy
     let doc = null, data = null;
     try {
@@ -196,7 +279,7 @@ async function loginUser() {
     diag.stage = stage;
     diag.errorCode = e?.code || '';
     diag.errorMessage = e?.message || String(e);
-    _recordAuthDiag(diag);
+    const payload = _recordAuthDiag(diag);
     if (_isAuthDebugEnabled()) {
       console.error('[auth login diagnostic]', diag, e);
     } else {
@@ -204,6 +287,11 @@ async function loginUser() {
     }
     const uiError = _authErrorForUI(e, stage);
     errEl.textContent = uiError;
+    const diagBox = document.getElementById('login-diagnostic');
+    if (diagBox && payload && _isAuthDebugEnabled()) {
+      _renderLoginDiagnostic(payload);
+      diagBox.style.display = 'block';
+    }
     if (_isAuthDebugEnabled()) showToast(`Diagnostic login enregistré`);
   }
 }
