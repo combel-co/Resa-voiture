@@ -1,7 +1,7 @@
 // ==========================================
 // AUTH — WELCOME / LOGIN / SIGNUP / PROFILE
 // ==========================================
-const AUTH_BUILD = 'auth-v12-20260324';
+const AUTH_BUILD = 'auth-v13-20260324';
 
 function showWelcomeScreen() {
   hideSplash();
@@ -25,33 +25,9 @@ function connectUser() {
   if (diagBox) diagBox.style.display = 'none';
   if (diagText) diagText.textContent = '';
   document.getElementById('login-overlay').classList.remove('hidden');
-  _setupLoginDiagGesture();
   const pins = document.querySelectorAll('#login-pin input');
   setupPinInputs(pins, loginUser);
   setTimeout(() => document.getElementById('login-email')?.focus(), 300);
-}
-
-let _loginDiagPressTimer = null;
-function _setupLoginDiagGesture() {
-  const title = document.getElementById('login-title');
-  if (!title || title.dataset.diagGestureBound === '1') return;
-  title.dataset.diagGestureBound = '1';
-
-  const start = () => {
-    clearTimeout(_loginDiagPressTimer);
-    _loginDiagPressTimer = setTimeout(() => {
-      window.toggleLoginDiagnostic();
-      showToast('Diagnostic activé');
-    }, 900);
-  };
-  const end = () => clearTimeout(_loginDiagPressTimer);
-
-  title.addEventListener('touchstart', start, { passive: true });
-  title.addEventListener('touchend', end, { passive: true });
-  title.addEventListener('touchcancel', end, { passive: true });
-  title.addEventListener('mousedown', start);
-  title.addEventListener('mouseup', end);
-  title.addEventListener('mouseleave', end);
 }
 
 function _renderLoginDiagnostic(payload) {
@@ -76,6 +52,41 @@ window.toggleLoginDiagnostic = function toggleLoginDiagnostic() {
   }
   _renderLoginDiagnostic(window.showLastLoginDiagnostic());
   diagBox.style.display = 'block';
+};
+
+async function _validateDiagAdminCode(inputCode) {
+  const code = String(inputCode || '').trim();
+  if (!code) return false;
+  if (sessionStorage.getItem('famresa_diag_admin_unlocked') === '1') return true;
+
+  const localCode = localStorage.getItem('famresa_diag_admin_code');
+  if (localCode && code === localCode) return true;
+
+  // Server-side config fallback (if available): config/access.adminDiagCode | diagAdminCode | pin
+  try {
+    if (window.db) {
+      const cfg = await db.collection('config').doc('access').get();
+      if (cfg.exists) {
+        const d = cfg.data() || {};
+        const serverCode = String(d.adminDiagCode || d.diagAdminCode || d.pin || '').trim();
+        if (serverCode && code === serverCode) return true;
+      }
+    }
+  } catch (_) {}
+
+  return false;
+}
+
+window.openLoginDiagnosticSecure = async function openLoginDiagnosticSecure() {
+  const code = window.prompt('Code admin requis');
+  if (!code) return;
+  const ok = await _validateDiagAdminCode(code);
+  if (!ok) {
+    showToast('Code admin invalide');
+    return;
+  }
+  sessionStorage.setItem('famresa_diag_admin_unlocked', '1');
+  window.toggleLoginDiagnostic();
 };
 
 function _isAuthDebugEnabled() {
@@ -141,9 +152,31 @@ function _recordAuthDiag(diag) {
     };
     localStorage.setItem('famresa_last_login_diag', JSON.stringify(payload));
     window.__famresaLastLoginDiag = payload;
+    _persistAuthDiagToFirestore(payload);
     return payload;
   } catch (_) {}
   return null;
+}
+
+async function _persistAuthDiagToFirestore(payload) {
+  try {
+    if (!window.db || !payload) return;
+    await db.collection('erreur').add({
+      source: 'login',
+      ref: payload.ref || '',
+      build: payload.build || '',
+      stage: payload.stage || '',
+      errorCode: payload.errorCode || '',
+      errorMessage: payload.errorMessage || '',
+      email: payload.email || '',
+      userAgent: payload.userAgent || '',
+      swControlled: !!payload.swControlled,
+      firebaseInit: payload.firebaseInit || null,
+      createdAt: ts(),
+    });
+  } catch (_) {
+    // Never block login flow if diagnostics persistence fails
+  }
 }
 
 window.showLastLoginDiagnostic = function showLastLoginDiagnostic() {
