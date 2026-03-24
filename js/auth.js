@@ -51,6 +51,22 @@ async function loginUser() {
       const d = oldSnap.docs[0].data();
       if (String(d.pin) !== pin) { errEl.textContent = 'Code incorrect'; return; }
       doc = oldSnap.docs[0]; data = d;
+
+      // Auto-migrate: create profil in new collection so future logins use it
+      try {
+        const existingProfil = await profilRef(doc.id).get();
+        if (!existingProfil.exists) {
+          await profilRef(doc.id).set({
+            nom: d.name || d.nom || '',
+            email: d.email || '',
+            code_pin: d.pin || '',
+            photo: d.photo || null,
+            familyId: d.familyId || null,
+            createdAt: d.createdAt || ts(),
+          });
+          console.log('[migration] Auto-created profil for legacy user', doc.id);
+        }
+      } catch(e) { console.warn('[migration] Failed to auto-create profil:', e); }
     }
 
     const familyId = data.familyId || data.famille_id || null;
@@ -84,7 +100,7 @@ async function loginUser() {
       await runMigrationIfNeeded();
     } else {
       showSkeleton();
-      runV2MigrationIfNeeded().catch(e => console.warn('[migration]', e));
+      await runV2MigrationIfNeeded().catch(e => console.warn('[migration]', e));
       await loadResources();
       enterApp();
       showToast(`Bonjour ${currentUser.name} !`);
@@ -613,8 +629,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (currentUser?.familyId) {
     // Show skeleton while data loads
     showSkeleton();
-    // Run data migration in background (non-blocking)
-    runV2MigrationIfNeeded().catch(e => console.warn('[migration]', e));
+    // Run data migration BEFORE loading resources (must complete first)
+    await runV2MigrationIfNeeded().catch(e => console.warn('[migration]', e));
     await loadResources();
     enterApp();
     if (_pendingResourceJoinCode) {

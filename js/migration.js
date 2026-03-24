@@ -1,22 +1,22 @@
 // ==========================================
 // MIGRATION V2 — OLD SCHEMA → NEW SCHEMA
 // Runs once per user on first load with new code.
-// Flag stored in localStorage: 'famresa_v2_migrated'
+// Flag stored in localStorage: 'famresa_v2_migrated_v3'
 // ==========================================
 
 async function runV2MigrationIfNeeded() {
   if (!currentUser?.familyId) return;
 
   // Fast path: localStorage cache
-  if (localStorage.getItem('famresa_v2_migrated') === '1') return;
+  if (localStorage.getItem('famresa_v2_migrated_v3') === '1') return;
 
   const familyId = currentUser.familyId;
 
   // Check Firestore flag (survives browser/device changes)
   try {
     const familleDoc = await familleRef(familyId).get();
-    if (familleDoc.exists && familleDoc.data().v2_migrated === true) {
-      localStorage.setItem('famresa_v2_migrated', '1');
+    if (familleDoc.exists && familleDoc.data().v2_migrated_v3 === true) {
+      localStorage.setItem('famresa_v2_migrated_v3', '1');
       return;
     }
   } catch (_) {}
@@ -68,21 +68,29 @@ async function runV2MigrationIfNeeded() {
       await batch.commit();
     }
 
-    // ── 3. Migrate PROFILS (users → profils) ──
-    const userDoc = await db.collection('users').doc(currentUser.id).get();
-    if (userDoc.exists) {
-      const d = userDoc.data();
-      const existingProfil = await profilRef(currentUser.id).get();
-      if (!existingProfil.exists) {
-        await profilRef(currentUser.id).set({
-          nom: currentUser.name || d.name || '',
-          email: d.email || currentUser.email || '',
+    // ── 3. Migrate PROFILS — ALL family members, not just current user ──
+    const allMembersSnap = await db.collection('families').doc(familyId).collection('members').get();
+    const memberIds = allMembersSnap.docs.map(d => d.id);
+    // Also include current user in case they're not in the members subcollection
+    if (!memberIds.includes(currentUser.id)) memberIds.push(currentUser.id);
+
+    for (const memberId of memberIds) {
+      try {
+        const existingProfil = await profilRef(memberId).get();
+        if (existingProfil.exists) continue; // already migrated
+        const userDoc = await db.collection('users').doc(memberId).get();
+        if (!userDoc.exists) continue; // no legacy data
+        const d = userDoc.data();
+        await profilRef(memberId).set({
+          nom: d.name || d.nom || '',
+          email: d.email || '',
           code_pin: d.pin || '',
-          photo: currentUser.photo || d.photo || null,
+          photo: d.photo || null,
           familyId: d.familyId || familyId,
           createdAt: d.createdAt || ts(),
         });
-      }
+        console.log('[migration] Migrated profil for member', memberId);
+      } catch(e) { console.warn('[migration] Failed to migrate profil for', memberId, e); }
     }
 
     // ── 4. Migrate RESSOURCES (families/{id}/resources → ressources) ──
@@ -181,10 +189,10 @@ async function runV2MigrationIfNeeded() {
       await batch.commit();
     }
 
-    localStorage.setItem('famresa_v2_migrated', '1');
+    localStorage.setItem('famresa_v2_migrated_v3', '1');
     // Persist flag in Firestore so other devices/browsers skip migration
     try {
-      await familleRef(familyId).update({ v2_migrated: true });
+      await familleRef(familyId).update({ v2_migrated_v3: true });
     } catch (_) {}
     console.log('[migration] v2 migration complete');
   } catch (e) {
