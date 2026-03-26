@@ -69,6 +69,22 @@ async function loadResources() {
       } catch(_) {}
     }
 
+    // If our standard queries missed access docs (legacy field names on acces_ressource),
+    // attempt a per-resource lookup before seeding new entries.
+    if (myAccessEntries.length === 0 && allResources.length > 0) {
+      try {
+        const docsByResource = await Promise.all(
+          allResources.map((res) => findResourceAccessDocs(res.id, currentUser.id))
+        );
+        const existingDocs = docsByResource.flat();
+        if (existingDocs.length > 0) {
+          myAccessEntries = existingDocs
+            .map((d) => accesRessourceToJS(d.data(), d.id))
+            .filter((e) => e.famille_id === familyId || e.familyId === familyId);
+        }
+      } catch(_) {}
+    }
+
     if (myAccessEntries.length === 0 && allResources.length > 0) {
       // No access records yet — determine role from family created_by
       let role = 'member';
@@ -92,11 +108,16 @@ async function loadResources() {
       // Try writing to new collection; silently ignore if not permitted yet
       try {
         const batch = db.batch();
-        for (const res of allResources) {
+        const docsByResource = await Promise.all(
+          allResources.map((res) => findResourceAccessDocs(res.id, currentUser.id))
+        );
+        for (let i = 0; i < allResources.length; i++) {
+          if ((docsByResource[i] || []).length > 0) continue;
+          const res = allResources[i];
           batch.set(accesRessourceRef().doc(), {
             ressource_id: res.id, profil_id: currentUser.id,
             famille_id: familyId, role, statut: 'accepted',
-            invited_at: ts(), accepted_at: ts()
+            invited_at: ts(), accepted_at: ts(),
           });
         }
         await batch.commit();
@@ -425,11 +446,21 @@ async function confirmAddResource() {
     resources.push(newRes);
 
     // Auto-grant admin access to the creator
-    await accesRessourceRef().add({
-      ressource_id: ref.id, profil_id: currentUser.id,
-      famille_id: currentUser.familyId, role: 'admin',
-      statut: 'accepted', invited_at: ts(), accepted_at: ts()
-    });
+    const existingDocs = await findResourceAccessDocs(ref.id, currentUser.id);
+    if (existingDocs.length > 0) {
+      await accesRessourceRef().doc(existingDocs[0].id).update({
+        role: 'admin',
+        statut: 'accepted',
+        invited_at: ts(),
+        accepted_at: ts(),
+      });
+    } else {
+      await accesRessourceRef().add({
+        ressource_id: ref.id, profil_id: currentUser.id,
+        famille_id: currentUser.familyId, role: 'admin',
+        statut: 'accepted', invited_at: ts(), accepted_at: ts(),
+      });
+    }
     if (!window._myResourceRoles) window._myResourceRoles = {};
     window._myResourceRoles[ref.id] = 'admin';
 
@@ -977,23 +1008,29 @@ async function handleResourceJoinCode(code) {
     if (snap.empty) { showToast('Lien invalide ou expiré'); return; }
     const resourceId = snap.docs[0].id;
 
-    // Check for existing access entry
-    const existing = await accesRessourceRef()
-      .where('ressource_id', '==', resourceId)
-      .where('profil_id', '==', currentUser.id)
-      .get();
+    const existingDocs = await findResourceAccessDocs(resourceId, currentUser.id);
+    const existingEntries = existingDocs.map((d) => accesRessourceToJS(d.data(), d.id));
+    const statuts = new Set(existingEntries.map((e) => (e.statut ?? e.status)).filter(Boolean));
 
-    if (!existing.empty) {
-      const statut = existing.docs[0].data().statut;
-      if (statut === 'accepted') { showToast('Tu as déjà accès à cette ressource'); return; }
-      if (statut === 'pending') { showToast('Ta demande est déjà en attente d\'approbation'); return; }
+    if (statuts.has('accepted')) { showToast('Tu as déjà accès à cette ressource'); return; }
+    if (statuts.has('pending')) { showToast('Ta demande est déjà en attente d\'approbation'); return; }
+
+    // Previously rejected (or unknown status): re-submit by updating an existing doc if possible
+    if (existingDocs.length > 0) {
+      await accesRessourceRef().doc(existingDocs[0].id).update({
+        statut: 'pending',
+        invited_at: ts(),
+        accepted_at: null,
+      });
+      showToast('Demande envoyée — en attente d\'approbation par l\'admin');
+      return;
     }
 
     await accesRessourceRef().add({
       ressource_id: resourceId, profil_id: currentUser.id,
       famille_id: currentUser.familyId,
       role: 'member', statut: 'pending',
-      invited_at: ts(), accepted_at: null
+      invited_at: ts(), accepted_at: null,
     });
     showToast('Demande envoyée — en attente d\'approbation par l\'admin');
   } catch(e) { console.error(e); showToast('Erreur — réessayez'); }
