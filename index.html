@@ -807,8 +807,27 @@
 <script src="js/migration.js?v=5" defer></script>
 
 <script>
+window.__startupCacheCheckPending = true;
+window.__startupHideSplashRequested = false;
+
 (async function initServiceWorker() {
-  if (!('serviceWorker' in navigator)) return;
+  if (!('serviceWorker' in navigator)) {
+    window.__startupCacheCheckPending = false;
+    return;
+  }
+
+  const APP_BUILD = 'famresa-build-20260326-1';
+
+  async function purgeAppRuntime() {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map(r => r.unregister()));
+    if (window.caches?.keys) {
+      const keys = await caches.keys();
+      await Promise.all(keys
+        .filter(k => k.startsWith('famresa-') || k.startsWith('famcar-'))
+        .map(k => caches.delete(k)));
+    }
+  }
 
   const params = new URLSearchParams(location.search);
   const isSafeMode = params.get('safe_mode') === '1';
@@ -816,44 +835,57 @@
     sessionStorage.removeItem('famresa_safe_mode_done');
   }
 
-  // Emergency mode: unregister SW and purge app caches once, then reload clean URL.
-  if (isSafeMode && sessionStorage.getItem('famresa_safe_mode_done') !== '1') {
-    try {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r => r.unregister()));
-      if (window.caches?.keys) {
-        const keys = await caches.keys();
-        await Promise.all(keys
-          .filter(k => k.startsWith('famresa-') || k.startsWith('famcar-'))
-          .map(k => caches.delete(k)));
-      }
+  try {
+    // One-time forced cleanup when build changes (keeps users fresh after deploys)
+    const previousBuild = localStorage.getItem('famresa_app_build');
+    if (previousBuild !== APP_BUILD) {
+      await purgeAppRuntime();
+      localStorage.setItem('famresa_app_build', APP_BUILD);
+      const reloadUrl = new URL(location.href);
+      reloadUrl.searchParams.set('cache_bust', Date.now().toString());
+      location.replace(reloadUrl.toString());
+      return;
+    }
+
+    // Emergency mode: unregister SW and purge app caches once, then reload clean URL.
+    if (isSafeMode && sessionStorage.getItem('famresa_safe_mode_done') !== '1') {
+      await purgeAppRuntime();
       sessionStorage.setItem('famresa_safe_mode_done', '1');
       const cleanUrl = new URL(location.href);
       cleanUrl.searchParams.delete('safe_mode');
       cleanUrl.searchParams.set('cache_bust', Date.now().toString());
       location.replace(cleanUrl.toString());
       return;
-    } catch (e) {
-      console.warn('[safe_mode] cleanup failed:', e);
     }
-  }
 
-  navigator.serviceWorker.register('./sw.js').then(reg => {
+    const reg = await navigator.serviceWorker.register('./sw.js');
+
     // Check for updates on every page load
-    reg.update();
+    await reg.update();
+
+    // If a worker is already waiting, apply it now
+    if (reg.waiting) reg.waiting.postMessage('skipWaiting');
+
     reg.addEventListener('updatefound', () => {
       const newSW = reg.installing;
-      newSW.addEventListener('statechange', () => {
+      newSW?.addEventListener('statechange', () => {
         if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-          // Auto-apply update immediately
           newSW.postMessage('skipWaiting');
         }
       });
     });
-  });
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    window.location.reload();
-  });
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      window.location.reload();
+    });
+  } catch (e) {
+    console.warn('[startup_update] failed:', e);
+  } finally {
+    window.__startupCacheCheckPending = false;
+    if (window.__startupHideSplashRequested && typeof window.hideSplash === 'function') {
+      window.hideSplash();
+    }
+  }
 })();
 
 function swApplyUpdate() {
