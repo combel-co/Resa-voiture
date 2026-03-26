@@ -119,8 +119,8 @@ function setupPinInputs(inputs, onComplete, options) {
         _setRealValue(list[idx], ch);
         idx++;
       }
-      if (idx < list.length) list[idx].focus();
-      else list[list.length - 1]?.focus();
+      if (idx < list.length) _focusInput(list[idx]);
+      else _focusInput(list[list.length - 1]);
       _maybeComplete();
     });
 
@@ -136,8 +136,8 @@ function setupPinInputs(inputs, onComplete, options) {
           _setRealValue(list[idx], ch);
           idx++;
         }
-        if (idx < list.length) list[idx].focus();
-        else list[list.length - 1]?.focus();
+        if (idx < list.length) _focusInput(list[idx]);
+        else _focusInput(list[list.length - 1]);
         _maybeComplete();
         return;
       }
@@ -168,8 +168,8 @@ function setupPinInputs(inputs, onComplete, options) {
         return;
       }
 
-      if (e.key === 'ArrowLeft' && i > 0) { e.preventDefault(); list[i - 1].focus(); }
-      if (e.key === 'ArrowRight' && i < list.length - 1) { e.preventDefault(); list[i + 1].focus(); }
+      if (e.key === 'ArrowLeft' && i > 0) { e.preventDefault(); _focusInput(list[i - 1]); }
+      if (e.key === 'ArrowRight' && i < list.length - 1) { e.preventDefault(); _focusInput(list[i + 1]); }
       if (e.key === 'Enter' && guardedComplete) guardedComplete();
     });
   });
