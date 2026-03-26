@@ -18,7 +18,7 @@ function connectUser() {
   document.getElementById('welcome-screen').style.display = 'none';
   const emailEl = document.getElementById('login-email');
   if (emailEl) emailEl.value = '';
-  document.querySelectorAll('#login-pin input').forEach(i => i.value = '');
+  clearPinInputs('#login-pin input');
   document.getElementById('login-error').textContent = '';
   const diagBox = document.getElementById('login-diagnostic');
   const diagText = document.getElementById('login-diagnostic-text');
@@ -379,7 +379,7 @@ function showSignupStep(id) {
     const prev = document.getElementById('su-photo-preview');
     if (prev) { prev.innerHTML = '📷'; prev.classList.remove('has-photo'); }
     document.querySelectorAll('#su-name,#su-email').forEach(el => { if (el) el.value = ''; });
-    document.querySelectorAll('#su-user-pin input').forEach(i => i.value = '');
+    clearPinInputs('#su-user-pin input');
     document.getElementById('su-profile-error').textContent = '';
     const pins = document.querySelectorAll('#su-user-pin input');
     setupPinInputs(pins, signupProfileAdvance);
@@ -399,7 +399,7 @@ function signupChooseCreate() {
   document.querySelectorAll('.su-step').forEach(s => s.classList.add('hidden'));
   document.getElementById('su-step-2b').classList.remove('hidden');
   document.getElementById('su-family-name').value = '';
-  document.querySelectorAll('#su-family-pin input, #su-family-pin-confirm input').forEach(i => i.value = '');
+  clearPinInputs('#su-family-pin input, #su-family-pin-confirm input');
   document.getElementById('su-create-error').textContent = '';
   const createPins = document.querySelectorAll('#su-family-pin input');
   const confirmPins = document.querySelectorAll('#su-family-pin-confirm input');
@@ -614,12 +614,15 @@ function showOnboardingStep(n) {
   if (n === 2) {
     const create = document.querySelectorAll('#ob-pin-create input');
     const confirm = document.querySelectorAll('#ob-pin-confirm input');
+    clearPinInputs(create);
+    clearPinInputs(confirm);
     setupPinInputs(create, () => confirm[0].focus());
     setupPinInputs(confirm, obStep2Advance);
     setTimeout(() => create[0].focus(), 300);
   }
   if (n === 3) {
     const pins = document.querySelectorAll('#ob-user-pin input');
+    clearPinInputs(pins);
     setupPinInputs(pins, obStep3Advance);
     setTimeout(() => document.getElementById('ob-name')?.focus(), 300);
   }
