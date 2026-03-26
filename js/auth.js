@@ -220,7 +220,7 @@ window.copyLastLoginDiagnostic = async function copyLastLoginDiagnostic() {
 
 async function loginUser() {
   const email = (document.getElementById('login-email')?.value || '').trim().toLowerCase();
-  const pin = Array.from(document.querySelectorAll('#login-pin input')).map(i => i.value.replace(/\D/g, '')).join('');
+  const pin = getPinFromInputs('#login-pin input');
   const errEl = document.getElementById('login-error');
   if (!email || !email.includes('@')) { errEl.textContent = 'Email invalide'; return; }
   if (pin.length < 4) { errEl.textContent = 'Entrez votre code à 4 chiffres'; return; }
@@ -435,8 +435,8 @@ async function signupJoinAdvance() {
 async function signupCreateAdvance() {
   if (_isSubmittingFamily) return;
   const familyName = (document.getElementById('su-family-name')?.value || '').trim();
-  const pin = Array.from(document.querySelectorAll('#su-family-pin input')).map(i => i.value.replace(/\D/g, '')).join('');
-  const confirm = Array.from(document.querySelectorAll('#su-family-pin-confirm input')).map(i => i.value.replace(/\D/g, '')).join('');
+  const pin = getPinFromInputs('#su-family-pin input');
+  const confirm = getPinFromInputs('#su-family-pin-confirm input');
   const errEl = document.getElementById('su-create-error');
   if (!familyName) { errEl.textContent = 'Entrez un nom pour votre famille'; return; }
   if (pin.length < 4) { errEl.textContent = 'Entrez le code familial (4 chiffres)'; return; }
@@ -475,7 +475,7 @@ function handleSignupPhoto(input) {
 async function signupProfileAdvance() {
   const name = (document.getElementById('su-name')?.value || '').trim();
   const email = (document.getElementById('su-email')?.value || '').trim().toLowerCase();
-  const pin = Array.from(document.querySelectorAll('#su-user-pin input')).map(i => i.value.replace(/\D/g, '')).join('');
+  const pin = getPinFromInputs('#su-user-pin input');
   const errEl = document.getElementById('su-profile-error');
   if (!name) { errEl.textContent = 'Entrez votre prénom'; return; }
   if (!email || !email.includes('@')) { errEl.textContent = 'Email invalide'; return; }
@@ -561,8 +561,8 @@ async function obStep4Advance() {
 
 async function obStep2Advance() {
   if (_isSubmittingFamily) return;
-  const create = Array.from(document.querySelectorAll('#ob-pin-create input')).map(i => i.value.replace(/\D/g, '')).join('');
-  const confirm = Array.from(document.querySelectorAll('#ob-pin-confirm input')).map(i => i.value.replace(/\D/g, '')).join('');
+  const create = getPinFromInputs('#ob-pin-create input');
+  const confirm = getPinFromInputs('#ob-pin-confirm input');
   const errEl = document.getElementById('ob-pin-error');
   if (create.length < 4) { errEl.textContent = 'Entrez 4 chiffres'; return; }
   if (create !== confirm) { errEl.textContent = 'Les codes ne correspondent pas'; return; }
@@ -581,7 +581,7 @@ async function obStep2Advance() {
 async function obStep3Advance() {
   const name = document.getElementById('ob-name')?.value.trim() || '';
   const email = document.getElementById('ob-email')?.value.trim() || '';
-  const pin = Array.from(document.querySelectorAll('#ob-user-pin input')).map(i => i.value.replace(/\D/g, '')).join('');
+  const pin = getPinFromInputs('#ob-user-pin input');
   const errEl = document.getElementById('ob-step3-error');
   if (!name) { errEl.textContent = 'Entrez votre prénom'; return; }
   if (!email || !email.includes('@')) { errEl.textContent = 'Email invalide'; return; }
@@ -811,7 +811,7 @@ function showChangePin() {
 }
 
 async function saveNewPin() {
-  const pin = Array.from(document.querySelectorAll('#change-pin-input input')).map(i => i.value.replace(/\D/g, '')).join('');
+  const pin = getPinFromInputs('#change-pin-input input');
   if (pin.length < 4) { document.getElementById('change-pin-error').textContent = 'Entrez 4 chiffres'; return; }
   try {
     await profilRef(currentUser.id).update({ code_pin: pin });

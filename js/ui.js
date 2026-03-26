@@ -16,7 +16,11 @@ function showToast(msg) {
 }
 
 // Reusable PIN input setup (auto-advance, backspace, auto-submit)
-function setupPinInputs(inputs, onComplete) {
+function setupPinInputs(inputs, onComplete, options) {
+  const opts = options || {};
+  const maskDelayMs = typeof opts.maskDelayMs === 'number' ? opts.maskDelayMs : 1500;
+  const maskChar = typeof opts.maskChar === 'string' && opts.maskChar.length ? opts.maskChar : '•';
+
   let _completing = false;
   const guardedComplete = onComplete ? () => {
     if (_completing) return;
@@ -25,18 +29,138 @@ function setupPinInputs(inputs, onComplete) {
     setTimeout(() => { _completing = false; }, 1000);
   } : null;
 
-  inputs.forEach((input, i) => {
-    input.addEventListener('input', (e) => {
-      const val = e.target.value;
-      if (val.length > 1) e.target.value = val.slice(-1);
-      if (val && i < inputs.length - 1) inputs[i + 1].focus();
-      if (i === inputs.length - 1 && val && guardedComplete) guardedComplete();
+  const list = Array.from(inputs || []);
+
+  function _clearMaskTimer(input) {
+    if (input && input.__pinMaskTimerId) {
+      clearTimeout(input.__pinMaskTimerId);
+      input.__pinMaskTimerId = null;
+    }
+  }
+
+  function _setRealValue(input, digit) {
+    _clearMaskTimer(input);
+    if (!digit) {
+      delete input.dataset.pinValue;
+      input.value = '';
+      return;
+    }
+    input.dataset.pinValue = digit;
+    input.value = digit;
+    input.__pinMaskTimerId = setTimeout(() => {
+      // Only mask if value hasn't been cleared/changed since scheduling
+      if (input.dataset.pinValue === digit) input.value = maskChar;
+    }, maskDelayMs);
+  }
+
+  function _getRealValue(input) {
+    const dv = input?.dataset?.pinValue;
+    if (dv && /^\d$/.test(dv)) return dv;
+    const v = String(input?.value || '').replace(/\D/g, '');
+    return v ? v.slice(-1) : '';
+  }
+
+  function _isComplete() {
+    return list.every((inp) => !!_getRealValue(inp));
+  }
+
+  function _maybeComplete() {
+    if (guardedComplete && _isComplete()) guardedComplete();
+  }
+
+  function _focusNext(fromIdx) {
+    for (let j = fromIdx + 1; j < list.length; j++) {
+      if (!_getRealValue(list[j])) { list[j].focus(); return; }
+    }
+    // Otherwise, keep focus on last
+    list[list.length - 1]?.focus();
+  }
+
+  function _focusPrev(fromIdx) {
+    for (let j = fromIdx - 1; j >= 0; j--) {
+      list[j].focus();
+      return;
+    }
+  }
+
+  list.forEach((input, i) => {
+    input.autocomplete = 'one-time-code';
+
+    input.addEventListener('paste', (e) => {
+      const text = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+      const digits = String(text).replace(/\D/g, '');
+      if (!digits) return;
+      e.preventDefault();
+
+      let idx = i;
+      for (const ch of digits) {
+        if (idx >= list.length) break;
+        _setRealValue(list[idx], ch);
+        idx++;
+      }
+      if (idx < list.length) list[idx].focus();
+      else list[list.length - 1]?.focus();
+      _maybeComplete();
     });
+
+    input.addEventListener('input', (e) => {
+      const raw = String(e.target.value || '');
+      const digits = raw.replace(/\D/g, '');
+
+      // If user typed multiple chars (mobile autofill), distribute like a paste
+      if (digits.length > 1) {
+        let idx = i;
+        for (const ch of digits) {
+          if (idx >= list.length) break;
+          _setRealValue(list[idx], ch);
+          idx++;
+        }
+        if (idx < list.length) list[idx].focus();
+        else list[list.length - 1]?.focus();
+        _maybeComplete();
+        return;
+      }
+
+      const digit = digits ? digits.slice(-1) : '';
+      _setRealValue(input, digit);
+
+      if (digit) {
+        if (i < list.length - 1) _focusNext(i);
+        _maybeComplete();
+      }
+    });
+
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Backspace' && !e.target.value && i > 0) inputs[i - 1].focus();
+      if (e.key === 'Backspace') {
+        const hasReal = !!_getRealValue(input);
+        const isMasked = input.value === maskChar && hasReal;
+
+        if (isMasked || input.value) {
+          // Clear current digit first
+          e.preventDefault();
+          _setRealValue(input, '');
+          return;
+        }
+
+        // If already empty, go to previous
+        if (i > 0) _focusPrev(i);
+        return;
+      }
+
+      if (e.key === 'ArrowLeft' && i > 0) { e.preventDefault(); list[i - 1].focus(); }
+      if (e.key === 'ArrowRight' && i < list.length - 1) { e.preventDefault(); list[i + 1].focus(); }
       if (e.key === 'Enter' && guardedComplete) guardedComplete();
     });
   });
+}
+
+function getPinFromInputs(selectorOrInputs) {
+  const inputs = typeof selectorOrInputs === 'string'
+    ? document.querySelectorAll(selectorOrInputs)
+    : selectorOrInputs;
+  return Array.from(inputs || [])
+    .map((i) => (i?.dataset?.pinValue || String(i?.value || '')).replace(/\D/g, ''))
+    .join('');
 }
 
 function resizePhotoFile(file, callback) {
