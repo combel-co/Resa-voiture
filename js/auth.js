@@ -28,7 +28,8 @@ function connectUser() {
   _setupLoginDiagGesture();
   const pins = document.querySelectorAll('#login-pin input');
   setupPinInputs(pins, loginUser);
-  setTimeout(() => document.getElementById('login-email')?.focus(), 300);
+  // Keep the PIN flow stable on iOS: do not steal focus back to email.
+  // If needed, user can tap email manually.
 }
 
 function _renderLoginDiagnostic(payload) {
