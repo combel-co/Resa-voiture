@@ -103,6 +103,8 @@ function setupPinInputs(inputs, onComplete, options) {
   }
 
   list.forEach((input, i) => {
+    if (input.__pinListenersBound) return;
+    input.__pinListenersBound = true;
     input.autocomplete = 'one-time-code';
 
     input.addEventListener('paste', (e) => {
@@ -170,6 +172,21 @@ function setupPinInputs(inputs, onComplete, options) {
       if (e.key === 'ArrowRight' && i < list.length - 1) { e.preventDefault(); list[i + 1].focus(); }
       if (e.key === 'Enter' && guardedComplete) guardedComplete();
     });
+  });
+}
+
+function clearPinInputs(selectorOrInputs) {
+  const inputs = typeof selectorOrInputs === 'string'
+    ? document.querySelectorAll(selectorOrInputs)
+    : selectorOrInputs;
+  Array.from(inputs || []).forEach((input) => {
+    if (!input) return;
+    if (input.__pinMaskTimerId) {
+      clearTimeout(input.__pinMaskTimerId);
+      input.__pinMaskTimerId = null;
+    }
+    delete input.dataset.pinValue;
+    input.value = '';
   });
 }
 
