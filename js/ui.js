@@ -208,6 +208,10 @@ function _syncHeaderHeight() {
 }
 
 function hideSplash() {
+  if (window.__startupCacheCheckPending) {
+    window.__startupHideSplashRequested = true;
+    return;
+  }
   const splash = document.getElementById('splash-screen');
   if (splash) {
     splash.style.opacity = '0';
