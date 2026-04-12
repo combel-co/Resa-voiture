@@ -1176,7 +1176,7 @@ function signupBackFromSimpleForm() { suGoBack(); }
 // ==========================================
 // CAR ONBOARDING (legacy wizard)
 // ==========================================
-let suPendingFamilyId = null;
+// suPendingFamilyId is declared in app.js (global scope)
 let _isSubmittingFamily = false;
 let selectedCarEmoji = '🚗';
 
