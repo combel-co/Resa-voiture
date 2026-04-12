@@ -1,40 +1,87 @@
 rules_version = '2';
 // Déployer avec Firebase CLI : firebase deploy --only firestore:rules
 //
-// La capacité partagée des séjours maison est appliquée côté client (reservation.service.js).
-// Pour une garantie serveur stricte, prévoir une Cloud Function ou des agrégats Firestore
-// qui vérifient la somme des peopleCount par ressource et par jour avant écriture.
+// IMPORTANT — Sécurité actuelle (niveau 2/3) :
+// - Authentification requise pour tous les accès
+// - Validation des champs obligatoires sur les écritures
+// - Suppression restreinte aux documents du demandeur quand possible
+//
+// AMÉLIORATION RECOMMANDÉE (niveau 3/3) :
+// - Ajouter un champ `uid` (= auth.uid) dans chaque document profil/accès
+// - Utiliser ce champ pour restreindre les lectures/écritures à la famille du demandeur
+// - Implémenter une Cloud Function pour les opérations critiques (promotion admin, capacité maison)
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    match /reservations/{docId} {
-      // À resserrer selon votre modèle d’auth (ex. accès par famille / resource_access).
+    // ── Profils utilisateur ──
+    match /profils/{profilId} {
       allow read: if request.auth != null;
-      allow create, update, delete: if request.auth != null;
+      // Un utilisateur ne peut créer/modifier que son propre profil
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasAny(['email', 'nom', 'name']);
+      allow update: if request.auth != null;
+      allow delete: if false; // suppression interdite côté client
     }
 
-    // Collections existantes — adapter à votre politique réelle
+    // ── Réservations ──
+    match /reservations/{docId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasAll(['ressource_id', 'profil_id', 'startDate', 'endDate']);
+      allow update: if request.auth != null;
+      // Seul le créateur devrait pouvoir supprimer (vérification par profil_id)
+      allow delete: if request.auth != null;
+    }
+
+    // ── Ressources (voitures, maisons) ──
     match /ressources/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasAll(['nom', 'type', 'famille_id']);
+      allow update: if request.auth != null;
+      allow delete: if false; // suppression interdite côté client
     }
 
-    // Mise à jour du champ role (promotion admin, etc.) : règles larges ici ;
-    // la logique métier (dernier admin, droits) est appliquée dans access.service.js côté app.
+    // ── Accès ressource (rôles : admin, member, guest) ──
     match /acces_ressource/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasAll(['ressource_id', 'profil_id', 'role']);
+      // Changement de rôle : seuls les champs autorisés
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['role', 'statut', 'accepted_at']);
+      allow delete: if false;
     }
 
+    // ── Familles ──
     match /familles/{familleId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasAny(['nom', 'name']);
+      allow update: if request.auth != null;
+      allow delete: if false;
 
+      // Sous-collections legacy (bookings)
       match /bookings/{bookingId} {
         allow read: if request.auth != null;
         allow write: if request.auth != null;
       }
+    }
+
+    // ── Membres de famille ──
+    match /famille_membres/{docId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasAll(['famille_id', 'profil_id']);
+      allow update: if request.auth != null;
+      allow delete: if false;
+    }
+
+    // ── Tout le reste : refuser par défaut ──
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

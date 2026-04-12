@@ -31,18 +31,15 @@ Application pour gérer et réserver les ressources familiales partagées : voit
 
 ### 2. Configurer l'application
 
-Ouvrir `js/firebase.js` et remplacer le bloc `firebaseConfig` :
+1. Copier `firebase-config.example.js` en `firebase-config.js`
+2. Remplir les valeurs avec les credentials de votre projet Firebase
 
-```javascript
-const firebaseConfig = {
-  apiKey: "VOTRE_CLÉ_ICI",
-  authDomain: "famresa-xxxxx.firebaseapp.com",
-  projectId: "famresa-xxxxx",
-  storageBucket: "famresa-xxxxx.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef"
-};
+```bash
+cp firebase-config.example.js firebase-config.js
+# Éditer firebase-config.js avec vos valeurs
 ```
+
+> **Ne jamais commiter `firebase-config.js`** — il est exclu par `.gitignore`.
 
 ### 3. Déployer
 
@@ -59,26 +56,18 @@ firebase init hosting  # choisir le projet, dossier "."
 firebase deploy
 ```
 
-### 4. Sécuriser Firestore (recommandé)
+### 4. Sécuriser Firestore
 
-Dans Firestore > Règles, remplacer par :
+Déployer les règles de sécurité fournies dans `firestore.rules` :
 
+```bash
+firebase deploy --only firestore:rules
 ```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /families/{familyId}/{document=**} {
-      allow read, write: if true;
-    }
-    match /users/{userId} {
-      allow read: if true;
-      allow create, update: if true;
-    }
-    match /config/{doc} {
-      allow read: if true;
-    }
-  }
-}
+
+Ces règles imposent l'authentification et valident les champs obligatoires sur les écritures. Pour Firebase Storage, déployer aussi `storage.rules` :
+
+```bash
+firebase deploy --only storage
 ```
 
 ## Architecture

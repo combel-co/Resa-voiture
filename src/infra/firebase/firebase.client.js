@@ -5,15 +5,10 @@
 // Loaded via <script> before js/firebase.js.
 // Exposes globals: db, ts, __firebaseInitState
 
-const firebaseConfig = {
-  apiKey: "REDACTED_API_KEY",
-  authDomain: "REDACTED_PROJECT_ID.firebaseapp.com",
-  projectId: "REDACTED_PROJECT_ID",
-  storageBucket: "REDACTED_PROJECT_ID.firebasestorage.app",
-  messagingSenderId: "REDACTED_SENDER_ID",
-  appId: "REDACTED_APP_ID",
-  measurementId: "REDACTED_MEASUREMENT_ID"
-};
+// Firebase config is loaded from firebase-config.js (gitignored).
+// See firebase-config.example.js for the template.
+const firebaseConfig = window.__firebaseConfig;
+if (!firebaseConfig) throw new Error('Firebase config introuvable — copier firebase-config.example.js vers firebase-config.js et remplir les valeurs.');
 
 window.__firebaseInitState = {
   status: 'booting',
