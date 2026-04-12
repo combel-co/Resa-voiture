@@ -42,7 +42,7 @@
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <!-- Non-blocking font loading (swap prevents FOIT) -->
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="css/style.css?v=63">
+<link rel="stylesheet" href="css/style.css?v=64">
 <!-- Firebase SDK (defer = non-blocking parse, keeps order) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" defer></script>
@@ -591,31 +591,6 @@
   <div class="confetti-container" id="confetti-container"></div>
 </div>
 
-<div id="invite-pending-screen" class="ob-overlay hidden">
-  <div class="ob-card ob-card--auth">
-    <div class="ob-auth-panel">
-      <div class="ob-emoji">✉️</div>
-      <h2 class="ob-auth-title">Demande envoyée !</h2>
-      <p id="invite-pending-copy" class="ob-auth-lead"></p>
-      <div id="invite-pending-pin-block" class="ob-auth-fields-wrap" style="display:none;margin-top:12px;text-align:left">
-        <p style="font-size: calc(13px * var(--ui-text-scale));color:var(--text-light);margin:0 0 10px">Tu as un code d'accès ? Entre-le ici.</p>
-        <fieldset class="pin-fieldset">
-          <legend class="pin-fieldset-legend pin-fieldset-legend--compact">Code à 4 chiffres</legend>
-          <div class="pin-input" id="invite-pending-pin" style="justify-content:center">
-            <input type="tel" id="invite-pending-pin-0" maxlength="1" inputmode="numeric" autocomplete="off">
-            <input type="tel" id="invite-pending-pin-1" maxlength="1" inputmode="numeric" autocomplete="off">
-            <input type="tel" id="invite-pending-pin-2" maxlength="1" inputmode="numeric" autocomplete="off">
-            <input type="tel" id="invite-pending-pin-3" maxlength="1" inputmode="numeric" autocomplete="off">
-          </div>
-        </fieldset>
-        <div class="lock-error" id="invite-pending-pin-error"></div>
-        <button type="button" class="btn btn-primary" style="width:100%;margin-top:8px" onclick="submitInvitePendingEmbeddedPin()">Valider</button>
-      </div>
-      <p id="invite-pending-or" style="display:none;text-align:center;color:var(--text-light);font-size: calc(13px * var(--ui-text-scale));margin:14px 0 10px">ou</p>
-      <button type="button" class="btn btn-outline ob-auth-btn-secondary" style="width:100%;margin-top:4px" onclick="closeInvitePendingAndWait()">J'attends la validation →</button>
-    </div>
-  </div>
-</div>
 
 <div id="join-invite-password-overlay" class="ob-overlay hidden">
   <div class="ob-card ob-card--auth">
@@ -958,7 +933,7 @@
 <script src="src/modules/resource/resource.repository.js?v=7" defer></script>
 <script src="src/modules/resource/resource.service.js?v=9" defer></script>
 <script src="js/booking.js?v=16" defer></script>
-<script src="js/calendar.js?v=20" defer></script>
+<script src="js/calendar.js?v=21" defer></script>
 <script src="js/history.js?v=5" defer></script>
 <script src="src/modules/profile/profile.service.js?v=2" defer></script>
 <script src="js/profile.js?v=7" defer></script>

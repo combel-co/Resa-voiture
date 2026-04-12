@@ -543,6 +543,17 @@ function _h4SafeOnclickId(id) {
   return String(id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
+/** Barre capacité maison : cercle avec places restantes + libellé. */
+function _h4CapBlockRemaining(cap, total) {
+  if (cap == null) return '';
+  const rest = cap - total;
+  const n = Math.max(0, rest);
+  const full = rest <= 0;
+  const circleCls = full ? 'h4-cap-num-circle h4-cap-num-circle--full' : 'h4-cap-num-circle';
+  const label = full ? 'Complet' : 'places restantes';
+  return `<div class="h4-cap-bar h4-cap-bar--simple" role="status"><span class="${circleCls}">${n}</span><span class="h4-cap-remain-label">${label}</span></div>`;
+}
+
 function showOccupiedDaySheetH4(dateStr, booking) {
   const res = resources.find((r) => r.id === selectedResource);
   const isHouse = res?.type === 'house';
@@ -568,12 +579,9 @@ function showOccupiedDaySheetH4(dateStr, booking) {
 
     let capBlock = '';
     if (cap != null) {
-      const rest = cap - total;
-      const restLabel = rest <= 0 ? 'Complet' : `${rest} places restantes sur ${cap}`;
-      const restColor = rest <= 0 ? '#c0392b' : '#2d6a4f';
-      capBlock = `<div class="h4-cap-bar"><span class="h4-cap-ico" aria-hidden="true">👥</span><div>${total} personnes au total · <span style="color:${restColor};font-weight:600">${restLabel}</span></div></div>`;
+      capBlock = _h4CapBlockRemaining(cap, total);
     } else {
-      capBlock = `<div class="h4-cap-bar"><span class="h4-cap-ico" aria-hidden="true">👥</span><div>${total} personne${total > 1 ? 's' : ''}</div></div>`;
+      capBlock = `<div class="h4-cap-bar h4-cap-bar--simple" role="status"><span class="h4-cap-remain-label">${total} personne${total > 1 ? 's' : ''}</span></div>`;
     }
 
     let sub;
@@ -618,7 +626,7 @@ function showOccupiedDaySheetH4(dateStr, booking) {
             ? `<span class="h4-invite-pill" aria-label="${inviteN} invité${inviteN > 1 ? 's' : ''}">+${inviteN}</span>`
             : '';
 
-        return `<div class="h4-stay-row-card"><div class="h4-stay-row-main"><div class="h4-avatar-wrap${meWrap}">${av}</div><div class="h4-stay-row-text"><div class="h4-stay-row-name">${nameEsc}</div><div class="h4-stay-row-dates">${subRow}</div></div></div>${pill}</div>`;
+        return `<div class="h4-stay-row-outer"><div class="h4-stay-row-card"><div class="h4-stay-row-main"><div class="h4-avatar-wrap${meWrap}">${av}</div><div class="h4-stay-row-text"><div class="h4-stay-row-name">${nameEsc}</div><div class="h4-stay-row-dates">${subRow}</div></div></div></div>${pill ? `<div class="h4-stay-row-pill-wrap">${pill}</div>` : ''}</div>`;
       })
       .join('');
 
@@ -643,7 +651,6 @@ function showOccupiedDaySheetH4(dateStr, booking) {
 
     const html = `
     <div class="login-sheet h4-sheet">
-      <div class="sheet-handle-bar"></div>
       <h2 style="font-size:22px;font-weight:500;margin:0 0 8px;text-transform:capitalize">${title}</h2>
       <p style="font-size:14px;color:#7c7269;margin:0 0 16px">${sub}</p>
       <div class="h4-stay-row-list">${rowsHtml}</div>
@@ -689,12 +696,9 @@ function showOccupiedDaySheetH4(dateStr, booking) {
   }
   let capBlock = '';
   if (cap != null) {
-    const rest = cap - total;
-    const restLabel = rest <= 0 ? 'Complet' : `${rest} places restantes sur ${cap}`;
-    const restColor = rest <= 0 ? '#c0392b' : '#2d6a4f';
-    capBlock = `<div class="h4-cap-bar"><span class="h4-cap-ico" aria-hidden="true">👥</span><div>${total} personnes au total · <span style="color:${restColor};font-weight:600">${restLabel}</span></div></div>`;
+    capBlock = _h4CapBlockRemaining(cap, total);
   } else {
-    capBlock = `<div class="h4-cap-bar"><span class="h4-cap-ico" aria-hidden="true">👥</span><div>${total} personne${total > 1 ? 's' : ''}</div></div>`;
+    capBlock = `<div class="h4-cap-bar h4-cap-bar--simple" role="status"><span class="h4-cap-remain-label">${total} personne${total > 1 ? 's' : ''}</span></div>`;
   }
 
   let actions = `<button type="button" class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">Fermer</button>`;
@@ -714,7 +718,6 @@ function showOccupiedDaySheetH4(dateStr, booking) {
 
   const html = `
     <div class="login-sheet h4-sheet">
-      <div class="sheet-handle-bar"></div>
       <h2 style="font-size:22px;font-weight:500;margin:0 0 8px;text-transform:capitalize">${title}</h2>
       <p style="font-size:14px;color:#7c7269;margin:0 0 16px">${sub}</p>
       <div class="h4-card-user">

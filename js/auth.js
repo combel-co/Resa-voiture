@@ -196,108 +196,12 @@ function backFromLogin() {
   _renderSplashGuestMode();
 }
 
-function showInvitePendingScreen(resourceName, resourceId, opts = {}) {
-  const screen = document.getElementById('invite-pending-screen');
-  const copy = document.getElementById('invite-pending-copy');
-  const pinBlock = document.getElementById('invite-pending-pin-block');
-  const orEl = document.getElementById('invite-pending-or');
-  const errEl = document.getElementById('invite-pending-pin-error');
-  if (!screen || !copy) return;
-  const name = resourceName || 'cette maison ou voiture';
-  _pendingJoinResourceId = resourceId || null;
-  copy.textContent = `L'admin de ${name} doit valider ta demande.`;
-  const showPin = !!opts.hasJoinPin;
-  if (pinBlock) pinBlock.style.display = showPin ? 'block' : 'none';
-  if (orEl) orEl.style.display = showPin ? 'block' : 'none';
-  if (errEl) errEl.textContent = '';
-  clearPinInputs('#invite-pending-pin input');
-  if (showPin) {
-    const pins = document.querySelectorAll('#invite-pending-pin input');
-    setupPinInputs(pins, submitInvitePendingEmbeddedPin);
-    setTimeout(() => pins[0]?.focus(), 150);
-  }
-  screen.classList.remove('hidden');
-}
-
-function closeInvitePendingScreen() {
-  document.getElementById('invite-pending-screen')?.classList.add('hidden');
-  _pendingJoinResourceId = null;
-}
-
-function openSecurityFromInvitePending() {
-  document.getElementById('invite-pending-pin-block')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  document.querySelector('#invite-pending-pin input')?.focus();
-}
-
 function closeJoinInvitePasswordOverlay() {
   document.getElementById('join-invite-password-overlay')?.classList.add('hidden');
   document.getElementById('join-invite-pin-error') && (document.getElementById('join-invite-pin-error').textContent = '');
   clearPinInputs('#join-invite-pin input');
 }
 
-async function submitInvitePendingEmbeddedPin() {
-  const errEl = document.getElementById('invite-pending-pin-error');
-  if (errEl) errEl.textContent = '';
-  const pin = getPinFromInputs('#invite-pending-pin input');
-  if (pin.length < 4) {
-    if (errEl) errEl.textContent = 'Entre les 4 chiffres';
-    return;
-  }
-  if (!currentUser?.id || !_pendingJoinResourceId) {
-    if (errEl) errEl.textContent = 'Session invalide — recharge la page.';
-    return;
-  }
-  const joinedResourceId = _pendingJoinResourceId;
-  try {
-    await accessService.acceptPendingWithJoinPin({
-      resourceId: joinedResourceId,
-      profileId: currentUser.id,
-      pin,
-    });
-    closeInvitePendingScreen();
-    _pendingJoinResourceId = null;
-    if (typeof loadResources === 'function') await loadResources();
-    try {
-      await loadFamilyName();
-    } catch (_) {}
-    const resJoined = typeof resources !== 'undefined' && resources
-      ? resources.find((r) => r.id === joinedResourceId)
-      : null;
-    if (resJoined && typeof selectResource === 'function') {
-      selectResource(joinedResourceId);
-    }
-    if (typeof renderExperiencePanels === 'function') renderExperiencePanels();
-    if (typeof renderCalendar === 'function') renderCalendar();
-    if (typeof renderProfileTab === 'function') renderProfileTab();
-    if (typeof celebrateInviteWelcome === 'function') {
-      celebrateInviteWelcome({
-        resourceName: resJoined?.name || resJoined?.nom || 'la maison ou voiture',
-        resourceId: joinedResourceId,
-        isHouse: resJoined?.type === 'house',
-      });
-    } else {
-      showToast('Accès accepté ✓');
-    }
-  } catch (e) {
-    const msg = e?.message || '';
-    if (errEl) {
-      errEl.textContent = msg === 'PIN_MISMATCH'
-        ? 'Ce code n\'est pas le bon'
-        : msg === 'NO_JOIN_PIN'
-          ? 'Aucun code d\'accès n\'est défini pour cette maison ou voiture.'
-          : msg === 'NO_PENDING'
-            ? 'Aucune demande en attente'
-            : msg === 'ALREADY_ACCEPTED'
-              ? 'Tu as déjà accès'
-              : 'Erreur — réessaie';
-    }
-  }
-}
-
-function closeInvitePendingAndWait() {
-  closeInvitePendingScreen();
-  showToast('Tu seras notifié quand l’admin valide.');
-}
 
 async function submitJoinInvitePassword() {
   const errEl = document.getElementById('join-invite-pin-error');
@@ -319,7 +223,6 @@ async function submitJoinInvitePassword() {
       pin,
     });
     closeJoinInvitePasswordOverlay();
-    closeInvitePendingScreen();
     _pendingJoinResourceId = null;
     if (typeof loadResources === 'function') await loadResources();
     try {
@@ -410,9 +313,7 @@ async function _runEntryRouting() {
   if (_isPendingJoinResult(joinResult)) {
     hideSkeleton();
     await enterApp('dashboard');
-    showInvitePendingScreen(joinResult.resourceName, joinResult.resourceId, {
-      hasJoinPin: !!joinResult.hasJoinPin,
-    });
+    showToast('Demande envoyée — l\'admin doit valider.');
     return;
   }
   if (loadResult?.needsFirstResourceOnboarding) {
@@ -753,8 +654,7 @@ async function loginUser() {
       hideSkeleton();
       stage = 'enter_app'; diag.stage = stage;
       await enterApp('dashboard');
-      showToast(`Bonjour ${currentUser.name} !`);
-      showInvitePendingScreen(joinResult.resourceName, joinResult.resourceId);
+      showToast(`Bonjour ${currentUser.name} ! Demande en attente de validation.`);
       return;
     }
     if (loadResult?.needsFirstResourceOnboarding) {
@@ -1023,8 +923,7 @@ async function suLoginFromEmail() {
     if (_isPendingJoinResult(joinResult)) {
       hideSkeleton();
       await enterApp('dashboard');
-      showToast(`Bonjour ${currentUser.name} !`);
-      showInvitePendingScreen(joinResult.resourceName, joinResult.resourceId, { hasJoinPin: !!joinResult.hasJoinPin });
+      showToast(`Bonjour ${currentUser.name} ! Demande en attente de validation.`);
       return;
     }
     if (loadResult?.needsFirstResourceOnboarding) {
@@ -1077,10 +976,10 @@ async function suCreateAccount() {
         suGoToStep('access');
         return;
       }
-      // No join PIN → close overlay and show pending screen
+      // No join PIN → close overlay and go to dashboard
       document.getElementById('signup-overlay').classList.add('hidden');
       await enterApp('dashboard');
-      showInvitePendingScreen(joinResult.resourceName, joinResult.resourceId, { hasJoinPin: false });
+      showToast('Demande envoyée — l\'admin doit valider.');
       return;
     }
 
@@ -1154,11 +1053,7 @@ async function suSubmitAccessPin() {
 function suSkipAccessPin() {
   document.getElementById('signup-overlay').classList.add('hidden');
   enterApp('dashboard');
-  showInvitePendingScreen(
-    _pendingInviteResourceMeta?.resourceName || 'la ressource',
-    _suState.joinResourceId,
-    { hasJoinPin: true }
-  );
+  showToast('Demande envoyée — l\'admin doit valider.');
 }
 
 // -- Onboarding steps (type → family → resource) --

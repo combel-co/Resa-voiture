@@ -2110,6 +2110,12 @@ html.ui-large {
     border-radius: 12px;
     padding: 14px;
     margin-bottom: 12px;
+    text-align: left;
+  }
+  .h4-card-user > div:last-child {
+    text-align: left;
+    flex: 1;
+    min-width: 0;
   }
   .h4-avatar {
     width: 40px;
@@ -2150,51 +2156,103 @@ html.ui-large {
   }
   .h4-cap-ico { font-size: 18px; line-height: 1; }
 
+  .h4-cap-bar--simple {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    background: #f0ebe2;
+    border-radius: 16px;
+    padding: 12px 16px;
+    margin: 16px 0;
+  }
+  .h4-cap-num-circle {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #d8f3dc;
+    color: #1b4332;
+    font-size: calc(16px * var(--ui-text-scale));
+    font-weight: 700;
+    border: 1px solid #95d5b2;
+  }
+  .h4-cap-num-circle--full {
+    background: #fde8e8;
+    color: #c0392b;
+    border-color: #f5c2c7;
+  }
+  .h4-cap-remain-label {
+    font-size: calc(15px * var(--ui-text-scale));
+    font-weight: 600;
+    color: #2d2a24;
+  }
+
   .h4-stay-row-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-bottom: 4px;
+    gap: 14px;
+    margin-bottom: 8px;
+    align-items: flex-start;
   }
-  .h4-stay-row-card {
+  .h4-stay-row-outer {
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: space-between;
     gap: 12px;
+    width: 100%;
+    max-width: 100%;
+  }
+  .h4-stay-row-card {
+    display: block;
+    width: fit-content;
+    max-width: calc(100% - 52px);
     background: #f8f8f8;
-    border-radius: 14px;
-    padding: 12px 14px;
+    border-radius: 22px;
+    padding: 12px 16px;
     border: 1px solid #ece8e0;
+    box-sizing: border-box;
   }
   .h4-stay-row-main {
     display: flex;
     flex-direction: row;
-    align-items: center;
+    align-items: flex-start;
     gap: 12px;
-    min-width: 0;
-    flex: 1;
   }
   .h4-stay-row-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
     min-width: 0;
-    flex: 1;
   }
   .h4-stay-row-name {
     font-size: calc(15px * var(--ui-text-scale));
     font-weight: 600;
     color: #2d2a24;
     line-height: 1.25;
+    text-align: left;
+    width: 100%;
   }
   .h4-stay-row-dates {
     font-size: calc(12px * var(--ui-text-scale));
     color: #7c7269;
-    margin-top: 3px;
+    margin-top: 4px;
+    text-align: left;
+    width: 100%;
+  }
+  .h4-stay-row-pill-wrap {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .h4-invite-pill {
-    flex-shrink: 0;
-    min-width: 36px;
-    height: 36px;
-    padding: 0 8px;
+    min-width: 40px;
+    height: 40px;
+    padding: 0 10px;
     border-radius: 999px;
     display: inline-flex;
     align-items: center;
