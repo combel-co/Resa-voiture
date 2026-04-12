@@ -112,6 +112,8 @@ function syncPlanningReserveModalUi() {
 
 function getBookingOccupancy(booking) {
   if (!booking) return 0;
+  const pc = Number(booking.peopleCount);
+  if (Number.isFinite(pc) && pc > 0) return pc;
   const c = booking.companions != null ? Number(booking.companions) : Number(booking.guestCount);
   const extra = Number.isFinite(c) && c >= 0 ? c : 0;
   return 1 + extra;
@@ -423,7 +425,7 @@ function renderCalendar() {
         if (calIsHouse && calCap != null && typeof houseStayOccupancyByDate !== 'undefined') {
           const occ = houseStayOccupancyByDate[dateStr];
           const tot = occ && typeof occ.totalPeople === 'number' ? occ.totalPeople : 0;
-          if (tot < calCap) classes.push('bm-day--partial');
+          if (tot > 0 && tot < calCap) classes.push('bm-day--partial');
         }
       }
 
@@ -525,14 +527,138 @@ function planningOnReserveDayClick(dateStr) {
   renderCalendar();
 }
 
+function _h4EscapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/"/g, '&quot;');
+}
+
+function _h4LivePhotoForBookingId(bookingId) {
+  const live = Object.values(bookings || {}).find((b) => b && b.id === bookingId);
+  return (live && live._currentPhoto) || null;
+}
+
+function _h4SafeOnclickId(id) {
+  return String(id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
 function showOccupiedDaySheetH4(dateStr, booking) {
   const res = resources.find((r) => r.id === selectedResource);
   const isHouse = res?.type === 'house';
+  const dTap = new Date(dateStr + 'T00:00:00');
+  const title = dTap.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  const sheetRows =
+    isHouse && typeof houseStaySheetRowsByDate !== 'undefined'
+      ? houseStaySheetRowsByDate[dateStr]
+      : null;
+  const useHouseMulti = !!(isHouse && sheetRows && sheetRows.length > 0);
+
+  const cap =
+    typeof getResourceHouseCapacityNumber === 'function' ? getResourceHouseCapacityNumber(res) : null;
+
+  if (useHouseMulti) {
+    const occEntry =
+      typeof houseStayOccupancyByDate !== 'undefined' ? houseStayOccupancyByDate[dateStr] : null;
+    let total =
+      occEntry && typeof occEntry.totalPeople === 'number'
+        ? occEntry.totalPeople
+        : sheetRows.reduce((acc, r) => acc + (Number(r.people) || 0), 0);
+
+    let capBlock = '';
+    if (cap != null) {
+      const rest = cap - total;
+      const restLabel = rest <= 0 ? 'Complet' : `${rest} places restantes sur ${cap}`;
+      const restColor = rest <= 0 ? '#c0392b' : '#2d6a4f';
+      capBlock = `<div class="h4-cap-bar"><span class="h4-cap-ico" aria-hidden="true">👥</span><div>${total} personnes au total · <span style="color:${restColor};font-weight:600">${restLabel}</span></div></div>`;
+    } else {
+      capBlock = `<div class="h4-cap-bar"><span class="h4-cap-ico" aria-hidden="true">👥</span><div>${total} personne${total > 1 ? 's' : ''}</div></div>`;
+    }
+
+    let sub;
+    if (sheetRows.length === 1) {
+      const r0 = sheetRows[0];
+      const s0 = r0.startDate || dateStr;
+      const e0 = r0.endDate || s0;
+      const nights = Math.max(1, countStayNights(s0, e0));
+      const sFmt = new Date(s0 + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+      const eFmt = new Date(e0 + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+      sub = `Séjour du ${sFmt} → ${eFmt} · ${nights} nuit${nights > 1 ? 's' : ''}`;
+    } else {
+      sub = `${sheetRows.length} réservations ce jour`;
+    }
+
+    const myRow = currentUser ? sheetRows.find((r) => r.userId === currentUser.id) : null;
+    const isMine = !!myRow;
+
+    const rowsHtml = sheetRows
+      .map((row) => {
+        const photo = _h4LivePhotoForBookingId(row.bookingId) || row.photo;
+        const nameEsc = _h4EscapeHtml(row.userName || '—');
+        const inviteN = Math.max(0, (Number(row.people) || 1) - 1);
+        const rs = row.startDate || dateStr;
+        const re = row.endDate || rs;
+        const d1 = new Date(rs + 'T00:00:00');
+        const d2 = new Date(re + 'T00:00:00');
+        const subRow =
+          rs === re
+            ? d1.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+            : `${d1.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} → ${d2.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`;
+
+        const av = photo
+          ? `<div class="h4-avatar h4-avatar--img"><img src="${String(photo).replace(/"/g, '&quot;')}" alt=""></div>`
+          : `<div class="h4-avatar h4-avatar--txt">${getInitials(row.userName || '?')}</div>`;
+
+        const meWrap =
+          currentUser && row.userId === currentUser.id ? ' h4-avatar-wrap--me' : '';
+
+        const pill =
+          inviteN > 0
+            ? `<span class="h4-invite-pill" aria-label="${inviteN} invité${inviteN > 1 ? 's' : ''}">+${inviteN}</span>`
+            : '';
+
+        return `<div class="h4-stay-row-card"><div class="h4-stay-row-main"><div class="h4-avatar-wrap${meWrap}">${av}</div><div class="h4-stay-row-text"><div class="h4-stay-row-name">${nameEsc}</div><div class="h4-stay-row-dates">${subRow}</div></div></div>${pill}</div>`;
+      })
+      .join('');
+
+    let actions = `<button type="button" class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">Fermer</button>`;
+    if (isMine && myRow) {
+      const gid = _h4SafeOnclickId(myRow.reservationGroupId);
+      const bid = _h4SafeOnclickId(myRow.bookingId);
+      const sd = myRow.startDate || dateStr;
+      const ed = myRow.endDate || sd;
+      actions = `
+      <button type="button" class="btn btn-primary" style="width:100%;background:#2d6a4f;margin-top:12px" onclick="showEditStayFromSheet('${gid}','${bid}')">Modifier la réservation</button>
+      <button type="button" style="width:100%;margin-top:12px;background:none;border:none;color:#c0392b;font-size:14px;cursor:pointer" onclick="showCancelStayConfirmSheet('${gid}','${bid}','${sd}','${ed}',true)">Annuler la réservation</button>
+      <button type="button" class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">Fermer</button>`;
+    } else if (cap != null) {
+      const rest = cap - total;
+      if (rest > 0) {
+        actions = `
+      <button type="button" class="btn btn-primary" style="width:100%;background:#2d6a4f;margin-top:12px" onclick="closeSheet();enterPlanningReserveFromPrompt('${dateStr}')">Réserver aussi</button>
+      <button type="button" class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">Fermer</button>`;
+      }
+    }
+
+    const html = `
+    <div class="login-sheet h4-sheet">
+      <div class="sheet-handle-bar"></div>
+      <h2 style="font-size:22px;font-weight:500;margin:0 0 8px;text-transform:capitalize">${title}</h2>
+      <p style="font-size:14px;color:#7c7269;margin:0 0 16px">${sub}</p>
+      <div class="h4-stay-row-list">${rowsHtml}</div>
+      ${capBlock}
+      ${actions}
+    </div>`;
+
+    document.getElementById('sheet-content').innerHTML = html;
+    document.getElementById('overlay').classList.add('open');
+    return;
+  }
+
   const startDate = booking.startDate || booking.date || dateStr;
   const endDate = booking.endDate || startDate;
   const isMine = currentUser && booking.userId === currentUser.id;
-  const dTap = new Date(dateStr + 'T00:00:00');
-  const title = dTap.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   const nights = Math.max(1, countStayNights(startDate, endDate));
   const sFmt = new Date(startDate + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
   const eFmt = new Date(endDate + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
@@ -552,8 +678,6 @@ function showOccupiedDaySheetH4(dateStr, booking) {
     : `<div class="h4-avatar h4-avatar--txt">${getInitials(booking.userName || '?')}</div>`;
   const mineStyle = isMine ? 'h4-avatar-wrap--me' : '';
 
-  const cap =
-    typeof getResourceHouseCapacityNumber === 'function' ? getResourceHouseCapacityNumber(res) : null;
   let total = getBookingOccupancy(booking);
   if (
     isHouse &&

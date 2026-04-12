@@ -7,6 +7,8 @@ let currentYear = new Date().getFullYear();
 let bookings = {};
 /** Par date (YYYY-MM-DD) : occupation séjours maison agrégée — { totalPeople, byGroup: { [groupId]: number } } */
 let houseStayOccupancyByDate = {};
+/** Par date : lignes feuille « jour occupé » maison (tri alphabétique du nom). */
+let houseStaySheetRowsByDate = {};
 let resources = [];
 let selectedResource = null;
 let unsubscribe = null;

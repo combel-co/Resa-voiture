@@ -2150,6 +2150,62 @@ html.ui-large {
   }
   .h4-cap-ico { font-size: 18px; line-height: 1; }
 
+  .h4-stay-row-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .h4-stay-row-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: #f8f8f8;
+    border-radius: 14px;
+    padding: 12px 14px;
+    border: 1px solid #ece8e0;
+  }
+  .h4-stay-row-main {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    flex: 1;
+  }
+  .h4-stay-row-text {
+    min-width: 0;
+    flex: 1;
+  }
+  .h4-stay-row-name {
+    font-size: calc(15px * var(--ui-text-scale));
+    font-weight: 600;
+    color: #2d2a24;
+    line-height: 1.25;
+  }
+  .h4-stay-row-dates {
+    font-size: calc(12px * var(--ui-text-scale));
+    color: #7c7269;
+    margin-top: 3px;
+  }
+  .h4-invite-pill {
+    flex-shrink: 0;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 8px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #e8f5e9;
+    color: #1b4332;
+    font-size: calc(13px * var(--ui-text-scale));
+    font-weight: 700;
+    border: 1px solid #b7e4c7;
+  }
+
   /* ═══════════════════════════════════════════
      BOOKING MODAL (bm-*) — legacy modal retiré ; styles bm réutilisés
      ═══════════════════════════════════════════ */
@@ -2812,6 +2868,21 @@ html.ui-large {
   .su-input-large {
     font-size: calc(17px * var(--ui-text-scale)) !important;
     padding: 14px 12px !important;
+  }
+  .su-type-pick {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+  }
+  .su-type-btn {
+    flex: 1;
+    padding: 14px 10px !important;
+    font-size: calc(15px * var(--ui-text-scale)) !important;
+  }
+  .su-type-btn.selected {
+    background: var(--text) !important;
+    color: #fff !important;
+    border-color: var(--text) !important;
   }
   #su-email-login-block {
     animation: su-fade-in 0.25s ease;

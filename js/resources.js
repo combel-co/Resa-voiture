@@ -499,6 +499,54 @@ function buildHouseStayOccupancyFromDocs(allDocs) {
   return occupancy;
 }
 
+/**
+ * Par date : une ligne par groupe de séjour (même clé que byGroup), pour la feuille jour occupé.
+ */
+function buildHouseStaySheetRowsByDate(allDocs) {
+  const dayToMap = {};
+  for (const d of allDocs) {
+    const gk = _houseStayGroupKeyForDoc(d);
+    const people = _peopleCountFromStayDoc(d);
+    const start = d.startDate || d.date_debut;
+    const end = d.endDate || d.date_fin || start;
+    const push = (ds) => {
+      if (!dayToMap[ds]) dayToMap[ds] = new Map();
+      const prev = dayToMap[ds].get(gk);
+      if (!prev || people > prev.people) dayToMap[ds].set(gk, { doc: d, people });
+    };
+    if (start && end) {
+      let cur = new Date(start + 'T00:00:00');
+      const endObj = new Date(end + 'T00:00:00');
+      while (cur <= endObj) {
+        const ds = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`;
+        push(ds);
+        cur.setDate(cur.getDate() + 1);
+      }
+    } else if (d.date) {
+      push(d.date);
+    }
+  }
+  const out = {};
+  for (const ds of Object.keys(dayToMap)) {
+    const rows = [...dayToMap[ds].entries()].map(([groupKey, { doc, people }]) => ({
+      groupKey,
+      bookingId: doc.id,
+      userId: doc.userId || doc.profil_id || '',
+      userName: doc.userName || doc.nom || doc.name || '—',
+      photo: doc.photo || doc.userPhoto || null,
+      people,
+      reservationGroupId: doc.reservationGroupId || '',
+      startDate: doc.startDate || doc.date_debut || doc.date,
+      endDate: doc.endDate || doc.date_fin || doc.startDate || doc.date_debut || doc.date,
+    }));
+    rows.sort((a, b) =>
+      (a.userName || '').localeCompare(b.userName || '', 'fr', { sensitivity: 'base' })
+    );
+    out[ds] = rows;
+  }
+  return out;
+}
+
 function subscribeBookings() {
   if (unsubscribe) unsubscribe();
 
@@ -542,9 +590,12 @@ function subscribeBookings() {
       const byId = new Map();
       for (const d of _allDocsLegacy) byId.set(d.id, d);
       for (const d of _allDocsNew) byId.set(d.id, d);
-      houseStayOccupancyByDate = buildHouseStayOccupancyFromDocs([...byId.values()]);
+      const merged = [...byId.values()];
+      houseStayOccupancyByDate = buildHouseStayOccupancyFromDocs(merged);
+      houseStaySheetRowsByDate = buildHouseStaySheetRowsByDate(merged);
     } else {
       houseStayOccupancyByDate = {};
+      houseStaySheetRowsByDate = {};
     }
 
     renderCalendar();

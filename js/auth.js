@@ -787,7 +787,7 @@ async function loginUser() {
 }
 
 // ---- SIGNUP (step-by-step wizard) ----
-const _suState = { step: null, name: '', email: '', pin: '', emailExistsProfile: null, joinResourceId: null };
+const _suState = { step: null, name: '', email: '', pin: '', emailExistsProfile: null, joinResourceId: null, resourceType: null, familyId: null };
 
 function _suStepOrder() {
   return ['name', 'email', 'pin'];
@@ -799,7 +799,7 @@ function _suStepIndex(stepName) {
   const idx = order.indexOf(stepName);
   if (idx >= 0) return idx;
   // For steps not in the base order (e.g. 'access'), count based on DOM order
-  const allSteps = ['name', 'email', 'pin', 'access'];
+  const allSteps = ['name', 'email', 'pin', 'access', 'type', 'family', 'resource'];
   return allSteps.indexOf(stepName);
 }
 
@@ -829,6 +829,11 @@ function suGoToStep(stepName) {
 }
 
 function suGoBack() {
+  // Onboarding steps: type has no back (account already created), family→type, resource→family
+  if (_suState.step === 'type') return; // no-op, can't go back after account creation
+  if (_suState.step === 'family') { suGoToStep('type'); return; }
+  if (_suState.step === 'resource') { suGoToStep('family'); return; }
+
   const order = _suStepOrder();
   const currentIdx = order.indexOf(_suState.step);
   if (currentIdx <= 0) {
@@ -877,6 +882,8 @@ function startSignup() {
   _suState.pin = '';
   _suState.emailExistsProfile = null;
   _suState.joinResourceId = null;
+  _suState.resourceType = null;
+  _suState.familyId = null;
 
   // Clear all fields
   const nameEl = document.getElementById('su-name');
@@ -886,6 +893,18 @@ function startSignup() {
   clearPinInputs('#su-user-pin input, #su-user-pin-confirm input, #su-access-pin input, #su-email-login-pin input');
   document.querySelectorAll('#signup-overlay .lock-error').forEach(el => el.textContent = '');
   _suResetEmailStep();
+
+  // Reset onboarding fields
+  const familyNameEl = document.getElementById('su-family-name');
+  const resourceNameEl = document.getElementById('su-resource-name');
+  if (familyNameEl) familyNameEl.value = '';
+  if (resourceNameEl) resourceNameEl.value = '';
+  const pickH = document.getElementById('su-pick-house');
+  const pickC = document.getElementById('su-pick-car');
+  if (pickH) pickH.className = 'btn btn-outline su-type-btn';
+  if (pickC) pickC.className = 'btn btn-outline su-type-btn';
+  const typeBtn = document.getElementById('su-type-btn');
+  if (typeBtn) typeBtn.disabled = true;
 
   // Reset track position instantly before showing
   const track = document.getElementById('su-track');
@@ -1065,13 +1084,13 @@ async function suCreateAccount() {
       return;
     }
 
-    document.getElementById('signup-overlay').classList.add('hidden');
     if (loadResult?.needsFirstResourceOnboarding) {
-      setTimeout(() => {
-        if (typeof startFirstResourceOnboarding === 'function') startFirstResourceOnboarding();
-      }, 400);
+      // Continue in wizard → slide to onboarding steps
+      if (btn) { btn.disabled = false; btn.textContent = 'Créer mon compte'; }
+      suGoToStep('type');
       return;
     }
+    document.getElementById('signup-overlay').classList.add('hidden');
     await enterApp('dashboard');
     showToast(`Bienvenue ${name} !`);
   } catch (e) {
@@ -1140,6 +1159,96 @@ function suSkipAccessPin() {
     _suState.joinResourceId,
     { hasJoinPin: true }
   );
+}
+
+// -- Onboarding steps (type → family → resource) --
+
+function suPickType(type) {
+  _suState.resourceType = type === 'house' ? 'house' : 'car';
+  const h = document.getElementById('su-pick-house');
+  const c = document.getElementById('su-pick-car');
+  if (h) h.className = `btn su-type-btn ${type === 'house' ? 'selected' : 'btn-outline'}`;
+  if (c) c.className = `btn su-type-btn ${type === 'car' ? 'selected' : 'btn-outline'}`;
+  const btn = document.getElementById('su-type-btn');
+  if (btn) btn.disabled = false;
+  const errEl = document.getElementById('su-type-error');
+  if (errEl) errEl.textContent = '';
+}
+
+function suValidateType() {
+  if (!_suState.resourceType) {
+    const errEl = document.getElementById('su-type-error');
+    if (errEl) errEl.textContent = 'Choisissez un type';
+    return;
+  }
+  suGoToStep('family');
+}
+
+async function suValidateFamily() {
+  const name = (document.getElementById('su-family-name')?.value || '').trim();
+  const errEl = document.getElementById('su-family-error');
+  if (!name) { if (errEl) errEl.textContent = 'Donnez un nom à votre famille'; return; }
+  if (errEl) errEl.textContent = '';
+
+  const btn = document.querySelector('#su-step-family .su-btn-full');
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
+  try {
+    const fid = await createFamilyForOnboarding(name);
+    _suState.familyId = fid;
+    // Update resource step title + placeholder based on type
+    const titleEl = document.getElementById('su-resource-title');
+    const inputEl = document.getElementById('su-resource-name');
+    if (_suState.resourceType === 'house') {
+      if (titleEl) titleEl.textContent = 'Donnez un nom à votre maison';
+      if (inputEl) inputEl.placeholder = 'Ex : Maison de Bretagne';
+    } else {
+      if (titleEl) titleEl.textContent = 'Donnez un nom à votre voiture';
+      if (inputEl) inputEl.placeholder = 'Ex : Clio familiale';
+    }
+    if (btn) { btn.disabled = false; btn.textContent = 'Suivant'; }
+    suGoToStep('resource');
+  } catch (e) {
+    console.error(e);
+    if (btn) { btn.disabled = false; btn.textContent = 'Suivant'; }
+    if (errEl) errEl.textContent = 'Erreur — réessayez';
+  }
+}
+
+async function suSubmitResource() {
+  const name = (document.getElementById('su-resource-name')?.value || '').trim();
+  const errEl = document.getElementById('su-resource-error');
+  if (!name) { if (errEl) errEl.textContent = 'Donnez un nom'; return; }
+  if (errEl) errEl.textContent = '';
+
+  const btn = document.querySelector('#su-step-resource .su-btn-full');
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
+  try {
+    const resourceId = await createResourceFromOnboarding({
+      familyId: _suState.familyId,
+      type: _suState.resourceType,
+      name,
+    });
+    await loadResources({ suppressEmptyWelcomeUI: true });
+    try { await loadFamilyName(); } catch (_) {}
+    document.getElementById('signup-overlay').classList.add('hidden');
+    document.body.classList.remove('auth-mode');
+    await enterApp('dashboard');
+    if (typeof celebrateOnboardingResourceCreated === 'function') {
+      celebrateOnboardingResourceCreated({
+        resourceId,
+        resourceName: name,
+        isHouse: _suState.resourceType === 'house',
+      });
+    } else {
+      showToast(`Bienvenue ${_suState.name} !`);
+    }
+  } catch (e) {
+    console.error(e);
+    if (btn) { btn.disabled = false; btn.textContent = 'Créer →'; }
+    if (errEl) errEl.textContent = 'Erreur — réessayez';
+  }
 }
 
 // Legacy compat wrappers (deprecated)
