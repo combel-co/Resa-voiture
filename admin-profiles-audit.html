@@ -89,17 +89,6 @@
       font-size: 0.85rem;
     }
     .summary strong { display: block; font-size: 1.25rem; color: var(--text); }
-    .actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-    }
-    .danger {
-      background: #dc2626;
-      color: #fff;
-      border-color: #dc2626;
-    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -132,15 +121,6 @@
     .pill.idle { background: #cbd5e1; color: #1e293b; }
     .pill.okdel { background: #6ee7b7; color: #065f46; }
     .pill.block { background: #fecaca; color: #991b1b; }
-    .btn-del-row {
-      padding: 6px 10px;
-      font-size: 0.8rem;
-      border-radius: 6px;
-      border: 1px solid #dc2626;
-      color: #dc2626;
-      background: #fff;
-      font-weight: 700;
-    }
     .muted { color: var(--muted); font-size: 0.85rem; }
     @media (max-width: 720px) {
       table { display: block; overflow-x: auto; }
@@ -153,7 +133,8 @@
     <p class="lead">
       Outil local pour voir <strong>tous</strong> les documents <code>profils</code>, repérer les noms « test », les profils
       <strong>sans activité</strong> (aucune ligne <code>famille_membres</code> ni <code>acces_ressource</code>), et ceux que le script
-      <code>cleanup-orphan-profils.mjs</code> pourrait supprimer (sans réservation liée). Aucune suppression depuis cette page.
+      <code>cleanup-orphan-profils.mjs</code> pourrait supprimer (sans réservation liée). Cette page reste en lecture seule :
+      la suppression se fait uniquement via scripts Admin SDK.
     </p>
 
     <div class="card">

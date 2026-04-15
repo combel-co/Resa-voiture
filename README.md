@@ -163,7 +163,7 @@ Exemple crontab (minuit Europe/Paris via TZ local):
 0 0 * * * /usr/bin/node /path/to/repo/scripts/reset-test-profile.mjs --profile-id=VOTRE_PROFILE_ID --apply >> /var/log/famresa-reset.log 2>&1
 ```
 
-### Conserver uniquement `test@gmail.com` et supprimer les autres profils de test
+### Conserver uniquement `test+reset@famresa.local` et supprimer les autres profils de test
 
 Le script `cleanup-test-profils.mjs` détecte les profils test (`isTestProfile: true` ou nom/email contenant `test`) et supprime tous les profils test sauf celui à conserver.
 
@@ -175,7 +175,14 @@ npm run cleanup:test-profils
 npm run cleanup:test-profils:apply
 ```
 
-Par défaut, l'email conservé est `test@gmail.com`. Pour en conserver un autre :
+Par défaut, l'email conservé est `test@gmail.com`. Pour conserver `test+reset@famresa.local` (recommandé ici) :
+
+```bash
+node scripts/cleanup-test-profils.mjs --keep-email=test+reset@famresa.local
+node scripts/cleanup-test-profils.mjs --keep-email=test+reset@famresa.local --apply
+```
+
+Pour en conserver un autre :
 
 ```bash
 node scripts/cleanup-test-profils.mjs --keep-email=mon-test@exemple.com
@@ -185,7 +192,7 @@ node scripts/cleanup-test-profils.mjs --keep-email=mon-test@exemple.com --apply
 Après nettoyage, planifie le reset quotidien du profil conservé avec :
 
 ```bash
-node scripts/reset-test-profile.mjs --profile-id=VOTRE_PROFILE_ID --apply --seed-email=test@gmail.com
+node scripts/reset-test-profile.mjs --profile-id=VOTRE_PROFILE_ID --apply --seed-email=test+reset@famresa.local
 ```
 
 ## Maintenance — profils orphelins (Admin SDK)
@@ -204,7 +211,7 @@ Options utiles : `--only-test` (uniquement `isTestProfile`), `--out=./rapport.js
 
 ### Audit visuel avant suppression
 
-La page statique [`admin-profiles-audit.html`](admin-profiles-audit.html) (à ouvrir depuis la racine du site, avec `firebase-config.js` présent) liste tous les profils, met en évidence les profils « test » et ceux **sans activité** (pas de `famille_membres` ni `acces_ressource`), et indique lesquels correspondent au script de nettoyage. Il faut un **compte Firebase** (e-mail + mot de passe). Tu peux créer l’utilisateur **sans mot de passe dans le repo** via `npm run audit:user:create -- --email=…` (clé Admin), puis définir le mot de passe avec `--reset-link` ou dans la console — voir [docs/FIREBASE_ADMIN.md](docs/FIREBASE_ADMIN.md). Ouvre éventuellement `admin-profiles-audit.html?email=ton-adresse` pour préremplir l’e-mail.
+La page statique [`admin-profiles-audit.html`](admin-profiles-audit.html) (à ouvrir depuis la racine du site, avec `firebase-config.js` présent) liste tous les profils, met en évidence les profils « test » et ceux **sans activité** (pas de `famille_membres` ni `acces_ressource`), et indique lesquels correspondent au script de nettoyage. Elle est volontairement **en lecture seule** : les suppressions passent uniquement par scripts Admin SDK (`cleanup-test-profils` / `cleanup-orphan-profils`). Il faut un **compte Firebase** (e-mail + mot de passe). Tu peux créer l’utilisateur **sans mot de passe dans le repo** via `npm run audit:user:create -- --email=…` (clé Admin), puis définir le mot de passe avec `--reset-link` ou dans la console — voir [docs/FIREBASE_ADMIN.md](docs/FIREBASE_ADMIN.md). Ouvre éventuellement `admin-profiles-audit.html?email=ton-adresse` pour préremplir l’e-mail.
 
 ---
 

@@ -13,12 +13,6 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAdminAudit() {
-      return request.auth != null
-        && request.auth.token.email != null
-        && request.auth.token.email == "test@gmail.com";
-    }
-
     // ── Profils utilisateur ──
     match /profils/{profilId} {
       allow read: if request.auth != null;
@@ -26,8 +20,8 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.resource.data.keys().hasAny(['email', 'nom', 'name']);
       allow update: if request.auth != null;
-      // Suppression autorisée uniquement pour le compte admin d'audit
-      allow delete: if isAdminAudit();
+      // Suppression interdite côté client (Admin SDK / backend uniquement)
+      allow delete: if false;
     }
 
     // ── Réservations ──
@@ -36,8 +30,8 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.resource.data.keys().hasAll(['ressource_id', 'profil_id', 'startDate', 'endDate']);
       allow update: if request.auth != null;
-      // Seul le créateur devrait pouvoir supprimer (vérification par profil_id)
-      allow delete: if request.auth != null;
+      // Suppression interdite côté client (Admin SDK / backend uniquement)
+      allow delete: if false;
     }
 
     // ── Ressources (voitures, maisons) ──

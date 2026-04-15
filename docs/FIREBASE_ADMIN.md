@@ -4,9 +4,9 @@ Scripts concernés : [`scripts/reset-test-profile.mjs`](../scripts/reset-test-pr
 
 ## Emplacement du fichier (exemple machine locale)
 
-Chemin utilisé sur le poste de développement (adapter si besoin) :
+Chemin d'exemple (adaptez a votre poste) :
 
-`/Users/gaspipou/Documents/Notion/Projects/API - Github/FamResa/famcar-e2bb3-firebase-adminsdk-fbsvc-b7bfdb2261.json`
+`/absolute/path/to/firebase-service-account.json`
 
 **Important** : le chemin peut contenir des **espaces**. Dans le terminal, entourez toujours le chemin de **guillemets**.
 
@@ -20,7 +20,7 @@ Chemin utilisé sur le poste de développement (adapter si besoin) :
 À la racine du dépôt **Resa-voiture** (ce repo) :
 
 ```bash
-cd "/Users/gaspipou/Documents/Notion/Projects/Github-projects/Resa-voiture"
+cd "/absolute/path/to/Resa-voiture"
 npm install
 ```
 
@@ -29,14 +29,14 @@ npm install
 **zsh / bash** (session courante) :
 
 ```bash
-export GOOGLE_APPLICATION_CREDENTIALS="/Users/gaspipou/Documents/Notion/Projects/API - Github/FamResa/famcar-e2bb3-firebase-adminsdk-fbsvc-b7bfdb2261.json"
+export GOOGLE_APPLICATION_CREDENTIALS="/absolute/path/to/firebase-service-account.json"
 ```
 
 **Alternative** (sans variable d’environnement), ajouter à chaque commande :
 
-`--service-account="/Users/gaspipou/Documents/Notion/Projects/API - Github/FamResa/famcar-e2bb3-firebase-adminsdk-fbsvc-b7bfdb2261.json"`
+`--service-account="/absolute/path/to/firebase-service-account.json"`
 
-Le **project id** est lu depuis le JSON (`famcar-e2bb3`). Si besoin : `--project-id=famcar-e2bb3`.
+Le **project id** est lu depuis le JSON. Si besoin : `--project-id=votre-project-id`.
 
 ## Exemples
 
@@ -49,8 +49,8 @@ Le **project id** est lu depuis le JSON (`famcar-e2bb3`). Si besoin : `--project
 Remplacez `PROFIL_ID` par l’id Firestore du document `profils/{id}` :
 
 ```bash
-cd "/Users/gaspipou/Documents/Notion/Projects/Github-projects/Resa-voiture"
-export GOOGLE_APPLICATION_CREDENTIALS="/Users/gaspipou/Documents/Notion/Projects/API - Github/FamResa/famcar-e2bb3-firebase-adminsdk-fbsvc-b7bfdb2261.json"
+cd "/absolute/path/to/Resa-voiture"
+export GOOGLE_APPLICATION_CREDENTIALS="/absolute/path/to/firebase-service-account.json"
 node scripts/reset-test-profile.mjs --profile-id=PROFIL_ID
 ```
 
@@ -97,6 +97,22 @@ node scripts/cleanup-orphan-profils.mjs --apply --only-test
 
 Journal JSONL optionnel : `--out=./orphan-profils.jsonl`. Aide complète : `node scripts/cleanup-orphan-profils.mjs --help`.
 
+### Nettoyage profils test (garder un seul compte)
+
+Supprime (ou simule) les profils test (`isTestProfile: true` ou nom/email contenant `test`) tout en conservant un e-mail cible.
+
+```bash
+npm run cleanup:test-profils
+npm run cleanup:test-profils:apply
+```
+
+Exemple en conservant `test+reset@famresa.local` :
+
+```bash
+node scripts/cleanup-test-profils.mjs --keep-email=test+reset@famresa.local
+node scripts/cleanup-test-profils.mjs --keep-email=test+reset@famresa.local --apply
+```
+
 ### Compte Firebase pour la page « audit profils » (sans mot de passe dans le script)
 
 Le script crée l’utilisateur **Authentication** avec l’e-mail uniquement ; **vous choisissez le mot de passe** ensuite (console ou lien).
@@ -112,7 +128,8 @@ Pour recevoir un **lien** permettant de définir le mot de passe dans le navigat
 npm run audit:user:create -- --email=audit-famresa@votredomaine.com --reset-link
 ```
 
-Puis ouvrir [`admin-profiles-audit.html`](../admin-profiles-audit.html) et se connecter avec cet e-mail et le mot de passe choisi.
+Puis ouvrir [`admin-profiles-audit.html`](../admin-profiles-audit.html) et se connecter avec cet e-mail et le mot de passe choisi.  
+La page d’audit est volontairement en **lecture seule** ; toute suppression passe par les scripts Admin SDK.
 
 ## Erreur « permission denied » sur Firestore
 
