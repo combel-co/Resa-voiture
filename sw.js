@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v29';
+const CACHE_VERSION = 'v30';
 const CACHE_NAME = 'famresa-' + CACHE_VERSION;
 
 function getBasePath() {
@@ -24,6 +24,17 @@ function canCacheRequest(request) {
     return protocol === 'http:' || protocol === 'https:';
   } catch (_) {
     return false;
+  }
+}
+
+async function safeCachePut(cache, request, response) {
+  try {
+    if (!response || !response.ok) return;
+    await cache.put(request, response);
+  } catch (err) {
+    // Safari/iOS can throw transient network errors on Cache.put.
+    // Do not break request handling for cache write failures.
+    console.warn('[sw] cache.put skipped:', request?.url || request, err);
   }
 }
 
@@ -78,7 +89,7 @@ self.addEventListener('fetch', event => {
         .then(response => {
           if (response.ok && canCacheRequest(event.request)) {
             const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+            caches.open(CACHE_NAME).then(cache => safeCachePut(cache, event.request, clone));
             return response;
           }
           // Serveur répond 404/5xx (ex: GitHub Pages) → servir l'app shell depuis le cache
@@ -97,7 +108,7 @@ self.addEventListener('fetch', event => {
         .then(response => {
           if (response.ok && canCacheRequest(event.request)) {
             const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+            caches.open(CACHE_NAME).then(cache => safeCachePut(cache, event.request, clone));
           }
           return response;
         })
@@ -111,7 +122,7 @@ self.addEventListener('fetch', event => {
         return cached || fetch(event.request).then(response => {
           if (response.ok && canCacheRequest(event.request)) {
             const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+            caches.open(CACHE_NAME).then(cache => safeCachePut(cache, event.request, clone));
           }
           return response;
         });
