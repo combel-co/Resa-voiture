@@ -176,15 +176,8 @@ function celebrateInviteWelcome({ resourceName, resourceId, isHouse }) {
   window.__lastCelebrationRecap = null;
 
   const inviteFoot = document.getElementById('cel-invite-footer');
-  const cta = document.getElementById('cel-invite-cta');
   const continueBtn = document.getElementById('cel-invite-continue');
   if (inviteFoot) inviteFoot.style.display = 'flex';
-  if (cta) {
-    cta.textContent = 'Voir le planning →';
-    cta.onclick = () => {
-      finishInviteWelcomeCelebration(resourceId, !!isHouse);
-    };
-  }
   if (continueBtn) {
     continueBtn.textContent = 'Continuer';
     continueBtn.onclick = () => {
@@ -297,14 +290,6 @@ function finishOnboardingResourceCelebration(resourceId, isHouse, opts) {
         switchToBookingMode();
       }
     });
-  }
-}
-
-function finishInviteWelcomeCelebration(resourceId, isHouse) {
-  _closeCelebrationCommon();
-  if (resourceId && typeof selectResource === 'function') selectResource(resourceId);
-  if (typeof enterApp === 'function') {
-    enterApp('calendar');
   }
 }
 

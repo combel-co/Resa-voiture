@@ -15,6 +15,13 @@ function showToast(msg) {
   setTimeout(() => el.classList.remove('show'), 2500);
 }
 
+/** Profil — « Proposer une amélioration » : ouvre WhatsApp avec texte à compléter. */
+function openWhatsAppImprovementSuggestion() {
+  const msg = 'Bonjour,\nVoici ma proposition d\'amélioration !\n----\n';
+  const url = 'https://wa.me/33623590927?text=' + encodeURIComponent(msg);
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 /** Petit (a) vs grand (A) — localStorage famresa_ui_scale: 'normal' | 'large', défaut appliqué: grand */
 function setTextSizePreference(isLarge) {
   try {

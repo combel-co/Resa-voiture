@@ -990,16 +990,6 @@ html.ui-large {
     border-radius: 14px !important;
     box-shadow: 0 4px 20px rgba(0,0,0,0.12);
   }
-  .celebration-invite-secondary {
-    width: 100%;
-    padding: 14px 22px !important;
-    background: transparent !important;
-    color: #fff !important;
-    border: 2px solid rgba(255,255,255,0.85) !important;
-    font-weight: 600 !important;
-    border-radius: 14px !important;
-    box-shadow: none !important;
-  }
   .celebration-recap-card {
     margin: 18px auto 0;
     width: min(360px, 100%);
