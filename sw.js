@@ -48,7 +48,6 @@ self.addEventListener('install', event => {
         withBase('index.html'),
         withBase('manifest.json'),
         withBase('css/style.css'),
-        withBase('firebase-config.js'),
         withBase('icons/logo.svg'),
         withBase('icons/apple-touch-icon.png'),
         withBase('icons/favicon-32.png'),
