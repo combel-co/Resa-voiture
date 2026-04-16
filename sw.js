@@ -1,5 +1,5 @@
-const CACHE_VERSION = 'v31';
-const CACHE_NAME = 'famresa-' + CACHE_VERSION;
+importScripts('./version.js');
+const CACHE_NAME = 'famresa-' + APP_VERSION;
 
 function getBasePath() {
   // SW scope ends with '/<repo>/' on GitHub Pages project sites.
@@ -44,6 +44,7 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME).then(cache => {
       return cache.addAll([
         withBase(''),
+        withBase('version.js'),
         withBase('index.html'),
         withBase('manifest.json'),
         withBase('css/style.css'),
@@ -134,7 +135,7 @@ self.addEventListener('fetch', event => {
             caches.open(CACHE_NAME).then(cache => safeCachePut(cache, event.request, clone));
           }
           return response;
-        });
+        }).catch(() => new Response('', { status: 503, statusText: 'Offline' }));
       })
     );
   }

@@ -41,6 +41,14 @@
     catch (_) { return false; }
   }
 
+  // Si l'utilisateur a installé l'app mais n'est plus en standalone,
+  // il l'a probablement désinstallée → reset le flag pour réafficher le prompt.
+  (function checkUninstallReset() {
+    if (!isStandalone() && wasAccepted()) {
+      try { localStorage.removeItem(LS_ACCEPTED); } catch (_) {}
+    }
+  })();
+
   function shouldShow() {
     return !isStandalone() && !wasDismissedRecently() && !wasAccepted();
   }

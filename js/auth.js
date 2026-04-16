@@ -426,12 +426,19 @@ function _isAuthDebugEnabled() {
 }
 
 function _authPublicErrorMessage(err) {
-  const code = String(err?.code || '').toLowerCase();
-  if (code.includes('permission-denied')) return 'Accès refusé Firestore (règles) — contactez l’admin';
-  if (code.includes('unavailable')) return 'Serveur indisponible — vérifiez votre connexion';
-  if (code.includes('deadline-exceeded')) return 'Délai dépassé — réessayez';
-  if (code.includes('failed-precondition')) return 'Configuration Firestore incomplète';
-  return 'Erreur — réessayez';
+  if (typeof navigator !== ‘undefined’ && !navigator.onLine) {
+    return ‘Vous êtes hors ligne — vérifiez votre connexion internet’;
+  }
+  const code = String(err?.code || ‘’).toLowerCase();
+  const msg = String(err?.message || ‘’).toLowerCase();
+  if (code.includes(‘permission-denied’)) return ‘Accès refusé Firestore (règles) — contactez l\’admin’;
+  if (code.includes(‘unavailable’)) return ‘Serveur indisponible — vérifiez votre connexion’;
+  if (code.includes(‘deadline-exceeded’)) return ‘Délai dépassé — réessayez’;
+  if (code.includes(‘failed-precondition’)) return ‘Configuration Firestore incomplète’;
+  if (msg.includes(‘failed to fetch’) || msg.includes(‘networkerror’) || msg.includes(‘network request failed’)) {
+    return ‘Erreur réseau — vérifiez votre connexion internet’;
+  }
+  return ‘Erreur — réessayez’;
 }
 
 function _stageReason(stage) {
