@@ -6,4 +6,3 @@ node_modules/
 !*.env.example
 *-service-account*.json
 *credentials*.json
-firebase-config.js
