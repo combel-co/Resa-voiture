@@ -331,41 +331,63 @@ html.ui-large {
   }
 
   /* ---- PULL-TO-REFRESH INDICATOR ---- */
-  .ptr-indicator {
+  #ptr-indicator {
+    position: fixed;
+    top: calc(var(--header-h, 56px) + 8px);
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
-    height: 0;
-    overflow: hidden;
-    transition: height 0.25s ease;
+    gap: 6px;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
   }
-  .ptr-indicator.active { transition: none; }
-  .ptr-indicator.refreshing {
-    height: 52px;
-    transition: height 0.25s ease;
+  #ptr-indicator.active   { opacity: 1; transition: none; }
+  #ptr-indicator.refreshing { opacity: 1; transition: none; }
+  .ptr-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 2px 14px rgba(0,0,0,0.14);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  .ptr-spinner {
-    width: 32px;
-    height: 32px;
+  .ptr-svg {
+    width: 44px;
+    height: 44px;
     transform: rotate(-90deg);
   }
-  .ptr-indicator.refreshing .ptr-spinner {
-    animation: ptr-spin 0.8s linear infinite;
-  }
-  .ptr-track {
-    stroke: var(--border);
-  }
-  .ptr-fill {
+  .ptr-track { stroke: var(--border); }
+  .ptr-arc {
     stroke: var(--accent);
     transition: stroke-dashoffset 0.05s linear;
   }
-  .ptr-indicator.refreshing .ptr-fill {
-    stroke-dashoffset: 23.56 !important;
-    transition: none;
+  #ptr-indicator.active .ptr-arc { transition: none; }
+  #ptr-indicator.refreshing .ptr-svg { animation: ptr-spin 0.8s linear infinite; }
+  #ptr-indicator.refreshing .ptr-arc { stroke-dashoffset: 0 !important; transition: none; }
+  @keyframes ptr-spin { to { transform: rotate(270deg); } }
+  .ptr-label {
+    background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 2px 14px rgba(0,0,0,0.14);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #111;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.15s ease;
   }
-  @keyframes ptr-spin {
-    to { transform: rotate(270deg); }
-  }
+  #ptr-indicator.refreshing .ptr-label { opacity: 1; }
 
   /* ═══════════════════════════════════════════
      CALENDAR

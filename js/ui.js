@@ -463,9 +463,7 @@ let _ptrArmed = false;
 const _PTR_PULL_FULL = 64;
 const _PTR_FIRE_RATIO = 0.82;
 const _PTR_FIRE_DELTA = Math.round(_PTR_PULL_FULL * _PTR_FIRE_RATIO);
-/** Hauteur max de la zone indicateur ; suit le progrès visuel 0→1. */
-const _PTR_INDICATOR_MAX_H = 52;
-const _PTR_CIRCUMFERENCE = 94.25; // 2 * π * 15
+const _PTR_CIRCUMFERENCE = 113.1; // 2 * π * 18
 
 function _isAppVisible() {
   const appMain = document.getElementById('app-main');
@@ -486,6 +484,8 @@ let _ptrSilentRefreshing = false;
 async function _runPtrSilentRefresh() {
   if (_ptrSilentRefreshing) return;
   _ptrSilentRefreshing = true;
+  const ind = document.getElementById('ptr-indicator');
+  if (ind) ind.classList.add('refreshing');
   try {
     if (typeof refreshAppDataSilently === 'function') {
       await refreshAppDataSilently();
@@ -494,14 +494,15 @@ async function _runPtrSilentRefresh() {
     console.error(e);
   } finally {
     _ptrSilentRefreshing = false;
+    if (ind) ind.classList.remove('refreshing');
   }
 }
 
 function _initPullToRefresh() {
   if (_pullToRefreshBound) return;
   const indicator = document.getElementById('ptr-indicator');
-  const fillCircle = indicator?.querySelector('.ptr-fill');
-  if (!indicator || !fillCircle) return;
+  const arc = indicator?.querySelector('.ptr-arc');
+  if (!indicator || !arc) return;
 
   _pullToRefreshBound = true;
 
@@ -510,8 +511,7 @@ function _initPullToRefresh() {
   function _ptrReset() {
     _ptrArmed = false;
     indicator.classList.remove('active');
-    indicator.style.height = '0';
-    fillCircle.style.strokeDashoffset = _PTR_CIRCUMFERENCE;
+    arc.style.strokeDashoffset = _PTR_CIRCUMFERENCE;
   }
 
   document.addEventListener('touchstart', (e) => {
@@ -541,34 +541,29 @@ function _initPullToRefresh() {
   document.addEventListener('touchmove', (e) => {
     if (!_ptrArmed) return;
     if (!_ptrAllowed()) {
-      indicator.style.height = '0';
       indicator.classList.remove('active');
+      arc.style.strokeDashoffset = _PTR_CIRCUMFERENCE;
       _ptrArmed = false;
-      fillCircle.style.strokeDashoffset = _PTR_CIRCUMFERENCE;
       return;
     }
     const currentY = e.touches?.[0]?.clientY || 0;
     const delta = currentY - _ptrStartY;
     if (delta <= 0) {
-      indicator.style.height = '0';
       indicator.classList.remove('active');
+      arc.style.strokeDashoffset = _PTR_CIRCUMFERENCE;
       return;
     }
 
     e.preventDefault();
 
     const progress = Math.min(delta / _PTR_PULL_FULL, 1);
-    const indicatorH = Math.round(progress * _PTR_INDICATOR_MAX_H);
     indicator.classList.add('active');
-    indicator.style.height = indicatorH + 'px';
-    fillCircle.style.strokeDashoffset = _PTR_CIRCUMFERENCE * (1 - progress);
+    arc.style.strokeDashoffset = _PTR_CIRCUMFERENCE * (1 - progress);
 
     if (delta >= _PTR_FIRE_DELTA) {
       _ptrArmed = false;
       indicator.classList.remove('active');
-      indicator.classList.remove('refreshing');
-      indicator.style.height = '0';
-      fillCircle.style.strokeDashoffset = _PTR_CIRCUMFERENCE;
+      arc.style.strokeDashoffset = _PTR_CIRCUMFERENCE;
       _runPtrSilentRefresh();
     }
   }, { passive: false, capture: cap });

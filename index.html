@@ -176,16 +176,18 @@
 </header>
 <div class="family-picker-dropdown" id="family-picker-dropdown"></div>
 
-<main id="app-main" style="display:none;">
-
-  <!-- Pull-to-refresh indicator -->
-  <div id="ptr-indicator" class="ptr-indicator">
-    <svg class="ptr-spinner" viewBox="0 0 36 36">
-      <circle class="ptr-track" cx="18" cy="18" r="15" fill="none" stroke-width="3"/>
-      <circle class="ptr-fill" cx="18" cy="18" r="15" fill="none" stroke-width="3"
-              stroke-dasharray="94.25" stroke-dashoffset="94.25" stroke-linecap="round"/>
+<div id="ptr-indicator" aria-hidden="true">
+  <div class="ptr-circle">
+    <svg class="ptr-svg" viewBox="0 0 44 44">
+      <circle class="ptr-track" cx="22" cy="22" r="18" fill="none" stroke-width="3"/>
+      <circle class="ptr-arc" cx="22" cy="22" r="18" fill="none" stroke-width="3"
+              stroke-dasharray="113.1" stroke-dashoffset="113.1" stroke-linecap="round"/>
     </svg>
   </div>
+  <span class="ptr-label">Actualisation</span>
+</div>
+
+<main id="app-main" style="display:none;">
 
   <!-- Resource tabs (populated by renderResourceTabs()) -->
   <div class="resource-tabs" id="resource-tabs"></div>
