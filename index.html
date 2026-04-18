@@ -177,15 +177,23 @@
 </header>
 <div class="family-picker-dropdown" id="family-picker-dropdown"></div>
 
-<div id="ptr-indicator" aria-hidden="true">
-  <div class="ptr-circle">
-    <svg class="ptr-svg" viewBox="0 0 44 44">
-      <circle class="ptr-track" cx="22" cy="22" r="18" fill="none" stroke-width="3"/>
-      <circle class="ptr-arc" cx="22" cy="22" r="18" fill="none" stroke-width="3"
-              stroke-dasharray="113.1" stroke-dashoffset="113.1" stroke-linecap="round"/>
+<div class="ptr-pill" id="ptr-pill" aria-live="polite" aria-atomic="true">
+  <div class="ptr-spinner" id="ptr-spinner">
+    <svg viewBox="0 0 26 26">
+      <circle class="ptr-track" cx="13" cy="13" r="11"/>
+      <circle class="ptr-arc" id="ptr-arc" cx="13" cy="13" r="11"
+              stroke-dasharray="69.1" stroke-dashoffset="69.1"/>
     </svg>
+    <div class="ptr-check">
+      <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
+        <path d="M2.5 7.5l3 3 6-7" stroke="#1b7a3e" stroke-width="2.4"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
   </div>
-  <span class="ptr-label">Actualisation</span>
+  <div class="ptr-label" id="ptr-label">
+    Tirez pour actualiser<span class="ptr-sub" id="ptr-sub"></span>
+  </div>
 </div>
 
 <main id="app-main" style="display:none;">
@@ -905,6 +913,7 @@
 <script src="src/infra/firebase/firebase.mapper.js?v=5" defer></script>
 <script src="js/firebase.js?v=9" defer></script>
 <script src="js/app.js?v=15" defer></script>
+<script src="src/modules/ui/ptr.service.js?v=1" defer></script>
 <script src="js/ui.js?v=13" defer></script>
 <script src="js/xp.js?v=4" defer></script>
 <script src="js/celebration.js?v=10" defer></script>

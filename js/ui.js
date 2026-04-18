@@ -449,125 +449,17 @@ async function enterApp(targetTab) {
       renderCalendar();
     });
   });
-  _initPullToRefresh();
+  initPTR({
+    container: document.getElementById(‘app-main’),
+    onRefresh: refreshAppDataSilently,
+    isAllowed: () => {
+      if (typeof activeTab === ‘undefined’) return false;
+      if (activeTab !== ‘dashboard’ && activeTab !== ‘calendar’) return false;
+      const rm = document.getElementById(‘resource-manage-overlay’);
+      if (rm && !rm.classList.contains(‘hidden’)) return false;
+      if (document.querySelector(‘#overlay.open’)) return false;
+      return true;
+    }
+  });
   setTimeout(() => maybePromptPendingFuel(), 350);
-}
-
-let _pullToRefreshBound = false;
-let _ptrStartY = 0;
-let _ptrArmed = false;
-/**
- * Tirage (px) pour remplir l’indicateur à 100 %.
- * Déclenchement un peu avant (ratio) pour ne pas exiger un geste au millimètre.
- */
-const _PTR_PULL_FULL = 64;
-const _PTR_FIRE_RATIO = 0.82;
-const _PTR_FIRE_DELTA = Math.round(_PTR_PULL_FULL * _PTR_FIRE_RATIO);
-const _PTR_CIRCUMFERENCE = 113.1; // 2 * π * 18
-
-function _isAppVisible() {
-  const appMain = document.getElementById('app-main');
-  return !!appMain && appMain.style.display !== 'none';
-}
-
-/** Pull-to-refresh uniquement sur Accueil (dashboard) et Planning (calendar), pas Profil ni écran « Gérer la ressource ». */
-function _ptrAllowed() {
-  if (typeof activeTab === 'undefined') return false;
-  if (activeTab !== 'dashboard' && activeTab !== 'calendar') return false;
-  const rm = document.getElementById('resource-manage-overlay');
-  if (rm && !rm.classList.contains('hidden')) return false;
-  return true;
-}
-
-let _ptrSilentRefreshing = false;
-
-async function _runPtrSilentRefresh() {
-  if (_ptrSilentRefreshing) return;
-  _ptrSilentRefreshing = true;
-  const ind = document.getElementById('ptr-indicator');
-  if (ind) ind.classList.add('refreshing');
-  try {
-    if (typeof refreshAppDataSilently === 'function') {
-      await refreshAppDataSilently();
-    }
-  } catch (e) {
-    console.error(e);
-  } finally {
-    _ptrSilentRefreshing = false;
-    if (ind) ind.classList.remove('refreshing');
-  }
-}
-
-function _initPullToRefresh() {
-  if (_pullToRefreshBound) return;
-  const indicator = document.getElementById('ptr-indicator');
-  const arc = indicator?.querySelector('.ptr-arc');
-  if (!indicator || !arc) return;
-
-  _pullToRefreshBound = true;
-
-  const cap = true;
-
-  function _ptrReset() {
-    _ptrArmed = false;
-    indicator.classList.remove('active');
-    arc.style.strokeDashoffset = _PTR_CIRCUMFERENCE;
-  }
-
-  document.addEventListener('touchstart', (e) => {
-    if (!_isAppVisible()) { _ptrArmed = false; return; }
-    if (document.querySelector('#overlay.open')) { _ptrArmed = false; return; }
-    if (!_ptrAllowed()) { _ptrArmed = false; return; }
-    const main = document.getElementById('app-main');
-    const t = e.target;
-    if (!main || !(t instanceof Node) || !main.contains(t)) {
-      _ptrArmed = false;
-      return;
-    }
-    if (main.scrollTop > 4) {
-      _ptrArmed = false;
-      return;
-    }
-    // Ne pas armer si le touch est dans un conteneur fils scrollé
-    let ancestor = t instanceof Node ? t.parentElement : null;
-    while (ancestor && ancestor !== main) {
-      if (ancestor.scrollTop > 0) { _ptrArmed = false; return; }
-      ancestor = ancestor.parentElement;
-    }
-    _ptrStartY = e.touches?.[0]?.clientY || 0;
-    _ptrArmed = true;
-  }, { passive: true, capture: cap });
-
-  document.addEventListener('touchmove', (e) => {
-    if (!_ptrArmed) return;
-    if (!_ptrAllowed()) {
-      indicator.classList.remove('active');
-      arc.style.strokeDashoffset = _PTR_CIRCUMFERENCE;
-      _ptrArmed = false;
-      return;
-    }
-    const currentY = e.touches?.[0]?.clientY || 0;
-    const delta = currentY - _ptrStartY;
-    if (delta <= 0) {
-      indicator.classList.remove('active');
-      arc.style.strokeDashoffset = _PTR_CIRCUMFERENCE;
-      return;
-    }
-
-    e.preventDefault();
-
-    const progress = Math.min(delta / _PTR_PULL_FULL, 1);
-    indicator.classList.add('active');
-    arc.style.strokeDashoffset = _PTR_CIRCUMFERENCE * (1 - progress);
-
-    if (delta >= _PTR_FIRE_DELTA) {
-      _ptrArmed = false;
-      indicator.classList.remove('active');
-      arc.style.strokeDashoffset = _PTR_CIRCUMFERENCE;
-      _runPtrSilentRefresh();
-    }
-  }, { passive: false, capture: cap });
-
-  document.addEventListener('touchend', _ptrReset, { passive: true, capture: cap });
-  document.addEventListener('touchcancel', _ptrReset, { passive: true, capture: cap });
 }

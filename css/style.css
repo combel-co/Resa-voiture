@@ -330,64 +330,62 @@ html.ui-large {
     z-index: 1;
   }
 
-  /* ---- PULL-TO-REFRESH INDICATOR ---- */
-  #ptr-indicator {
+  /* ============ Pull-to-refresh pill ============ */
+  .ptr-pill {
     position: fixed;
-    top: calc(var(--header-h, 56px) + 8px);
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
+    left: 0; right: 0;
+    top: calc(env(safe-area-inset-top, 0px) + 14px);
+    margin: 0 auto;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    z-index: 9999;
+    gap: 12px;
+    padding: 12px 22px 12px 14px;
+    background: #fff;
+    border-radius: 999px;
+    box-shadow: 0 6px 22px rgba(0,0,0,.12), 0 2px 4px rgba(0,0,0,.05);
+    border: 0.5px solid rgba(0,0,0,.04);
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity .22s ease, transform .22s cubic-bezier(.2,.8,.2,1);
+    z-index: 200;
     pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.15s ease;
   }
-  #ptr-indicator.active   { opacity: 1; transition: none; }
-  #ptr-indicator.refreshing { opacity: 1; transition: none; }
-  .ptr-circle {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.8);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    box-shadow: 0 2px 14px rgba(0,0,0,0.14);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .ptr-pill.is-visible { opacity: 1; transform: translateY(0); }
+  .ptr-pill.is-fade { transition: opacity .45s ease, transform .45s ease;
+                       opacity: 0; transform: translateY(-8px); }
+  .ptr-pill.is-release { transform: translateY(0) scale(1.05); }
+  .ptr-pill.is-done {
+    background: #f1faea;
+    border-color: #cde8b9;
   }
-  .ptr-svg {
-    width: 44px;
-    height: 44px;
-    transform: rotate(-90deg);
-  }
-  .ptr-track { stroke: var(--border); }
-  .ptr-arc {
-    stroke: var(--accent);
-    transition: stroke-dashoffset 0.05s linear;
-  }
-  #ptr-indicator.active .ptr-arc { transition: none; }
-  #ptr-indicator.refreshing .ptr-svg { animation: ptr-spin 0.8s linear infinite; }
-  #ptr-indicator.refreshing .ptr-arc { stroke-dashoffset: 0 !important; transition: none; }
-  @keyframes ptr-spin { to { transform: rotate(270deg); } }
-  .ptr-label {
-    background: rgba(255,255,255,0.8);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    box-shadow: 0 2px 14px rgba(0,0,0,0.14);
-    border-radius: 20px;
-    padding: 3px 10px;
-    font-size: 11px;
-    font-weight: 500;
-    color: #111;
-    white-space: nowrap;
-    opacity: 0;
-    transition: opacity 0.15s ease;
-  }
-  #ptr-indicator.refreshing .ptr-label { opacity: 1; }
+  .ptr-pill.is-done .ptr-label { color: #1b7a3e; }
+  .ptr-pill.is-done .ptr-sub   { color: #4a8a5c; }
+
+  .ptr-spinner { width: 26px; height: 26px; position: relative; flex-shrink: 0; }
+  .ptr-spinner svg { width: 26px; height: 26px; transform: rotate(-90deg); }
+  .ptr-track { fill: none; stroke: rgba(0,0,0,.1); stroke-width: 2.8; }
+  .ptr-arc   { fill: none; stroke: #1a1a18; stroke-width: 2.8;
+               stroke-linecap: round;
+               transition: stroke-dashoffset .05s linear; }
+
+  .ptr-spinner.is-loading svg { animation: ptrSpin .9s linear infinite;
+                                transform: rotate(0deg); }
+  .ptr-spinner.is-loading .ptr-arc { stroke-dashoffset: 17 !important; }
+  @keyframes ptrSpin { to { transform: rotate(360deg); } }
+
+  .ptr-check { position: absolute; inset: 0; display: flex;
+               align-items: center; justify-content: center;
+               opacity: 0; transform: scale(.6);
+               transition: opacity .2s, transform .2s; }
+  .ptr-pill.is-done .ptr-check { opacity: 1; transform: scale(1); }
+  .ptr-pill.is-done .ptr-spinner svg { opacity: 0; }
+
+  .ptr-label { font-size: 15px; font-weight: 600; color: #1a1a18;
+               white-space: nowrap; letter-spacing: -.1px; line-height: 1.15; }
+  .ptr-sub   { display: block; font-size: 11.5px; font-weight: 400;
+               color: #8a877f; margin-top: 2px; letter-spacing: .02em; }
 
   /* ═══════════════════════════════════════════
      CALENDAR
