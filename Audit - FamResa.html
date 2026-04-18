@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FamResa — Audit & propositions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f6f5f2;
+    --paper:#ffffff;
+    --ink:#1a1a18;
+    --ink-2:#55534d;
+    --ink-3:#8a877f;
+    --line:#e6e3dc;
+    --line-2:#efece5;
+    --lime:#56E800;
+    --lime-ink:#1f4d00;
+    --amber:#c77700;
+    --amber-bg:#fdf3e1;
+    --red:#b0251c;
+    --red-bg:#fbe9e6;
+    --green:#1b7a3e;
+    --green-bg:#e4f3ea;
+    --blue:#1d4ed8;
+    --blue-bg:#eaf0ff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .wrap{max-width:1120px;margin:0 auto;padding:56px 32px 120px}
+
+  /* ——— Cover ——— */
+  .cover{display:grid;grid-template-columns:1.3fr 1fr;gap:40px;align-items:end;padding:48px 40px;background:var(--paper);border:1px solid var(--line);border-radius:24px;margin-bottom:40px;position:relative;overflow:hidden}
+  .cover::after{content:"";position:absolute;right:-120px;bottom:-120px;width:360px;height:360px;border-radius:50%;background:var(--lime);opacity:.18;filter:blur(2px)}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);margin-bottom:20px}
+  .cover h1{font-family:'Fraunces',serif;font-weight:500;font-size:64px;line-height:1;letter-spacing:-1.5px;margin:0 0 18px}
+  .cover h1 em{font-style:italic;color:var(--ink-2)}
+  .cover p{font-size:16px;line-height:1.55;color:var(--ink-2);margin:0;max-width:48ch}
+  .cover-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-3);line-height:1.9;position:relative;z-index:1}
+  .cover-meta b{color:var(--ink);font-weight:500}
+  .cover-mark{display:inline-flex;align-items:center;gap:10px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-2);background:#fff}
+  .cover-mark .dot{width:8px;height:8px;border-radius:50%;background:var(--lime)}
+
+  /* ——— Sections ——— */
+  section{margin-top:56px}
+  h2{font-family:'Fraunces',serif;font-weight:500;font-size:34px;line-height:1.15;letter-spacing:-.5px;margin:0 0 8px}
+  .lede{font-size:15px;color:var(--ink-2);max-width:72ch;line-height:1.6;margin:0 0 24px}
+  h3{font-family:'Inter',sans-serif;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:0 0 16px;font-weight:600}
+
+  /* ——— Scorecard ——— */
+  .score-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .score{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
+  .score .label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+  .score .val{font-family:'Fraunces',serif;font-size:42px;font-weight:500;letter-spacing:-1px;margin-top:6px;line-height:1}
+  .score .val small{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink-3);margin-left:4px;letter-spacing:0}
+  .score .note{font-size:12px;color:var(--ink-2);margin-top:10px;line-height:1.45}
+  .score.good .val{color:var(--green)}
+  .score.warn .val{color:var(--amber)}
+  .score.bad  .val{color:var(--red)}
+
+  /* ——— Issue table ——— */
+  .table{background:var(--paper);border:1px solid var(--line);border-radius:20px;overflow:hidden}
+  .row{display:grid;grid-template-columns:56px 1.1fr 2.4fr 110px 110px;gap:0;border-top:1px solid var(--line-2);align-items:stretch}
+  .row:first-child{border-top:none;background:#faf8f3}
+  .row.head > *{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);padding:14px 18px}
+  .row > *{padding:18px;font-size:14px;line-height:1.5}
+  .row .id{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-3)}
+  .row .area{font-weight:600;color:var(--ink);display:flex;flex-direction:column;gap:4px}
+  .row .area span{font-weight:400;font-size:12px;color:var(--ink-3);font-family:'JetBrains Mono',monospace}
+  .row .desc{color:var(--ink-2)}
+  .row .desc b{color:var(--ink);font-weight:600}
+  .row .desc code{font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--line-2);padding:1px 6px;border-radius:4px;color:var(--ink)}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:999px;font-weight:600;white-space:nowrap}
+  .pill.sev-high{background:var(--red-bg);color:var(--red)}
+  .pill.sev-med{background:var(--amber-bg);color:var(--amber)}
+  .pill.sev-low{background:var(--line-2);color:var(--ink-2)}
+  .pill.effort-s{background:var(--green-bg);color:var(--green)}
+  .pill.effort-m{background:var(--amber-bg);color:var(--amber)}
+  .pill.effort-l{background:var(--red-bg);color:var(--red)}
+
+  /* ——— Two-col grid ——— */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px 24px}
+  .card h4{margin:0 0 6px;font-family:'Fraunces',serif;font-size:22px;font-weight:500;letter-spacing:-.3px}
+  .card .tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-bottom:10px}
+  .card p{color:var(--ink-2);font-size:14px;line-height:1.55;margin:0 0 10px}
+  .card ul{margin:8px 0 0;padding-left:18px;color:var(--ink-2);font-size:13.5px;line-height:1.6}
+  .card li{margin-bottom:4px}
+  .card li b{color:var(--ink)}
+  .card code{font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--line-2);padding:1px 6px;border-radius:4px;color:var(--ink)}
+
+  /* ——— Before / After ——— */
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .ba > div{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:20px 22px}
+  .ba .before{border-left:3px solid var(--red)}
+  .ba .after{border-left:3px solid var(--green)}
+  .ba h5{margin:0 0 10px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+  .ba pre{margin:0;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.55;color:var(--ink);white-space:pre-wrap;word-break:break-word}
+  .ba .note{font-size:12.5px;color:var(--ink-2);margin-top:10px;line-height:1.5}
+
+  /* ——— Roadmap ——— */
+  .roadmap{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .road{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px}
+  .road .wk{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+  .road h4{font-family:'Fraunces',serif;font-size:22px;font-weight:500;margin:4px 0 12px;letter-spacing:-.3px}
+  .road ol{margin:0;padding-left:18px;color:var(--ink-2);font-size:13.5px;line-height:1.65}
+  .road li{margin-bottom:6px}
+  .road li b{color:var(--ink)}
+
+  /* ——— Callout ——— */
+  .callout{background:var(--paper);border:1px solid var(--line);border-left:3px solid var(--lime);border-radius:16px;padding:22px 26px;display:flex;gap:20px;align-items:flex-start}
+  .callout .icon{width:36px;height:36px;border-radius:50%;background:var(--lime);color:var(--lime-ink);display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+  .callout p{margin:0;font-size:14.5px;color:var(--ink-2);line-height:1.6}
+  .callout p b{color:var(--ink)}
+
+  footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-3);display:flex;justify-content:space-between}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ COVER ============ -->
+  <div class="cover">
+    <div>
+      <div class="eyebrow">Audit technique & produit · lecture seule</div>
+      <h1>FamResa<br><em>ce qui marche, ce qui<br>peut s'améliorer.</em></h1>
+      <p>Analyse du dépôt <b>Resa-voiture</b> : architecture, règles Firestore, front PWA, docs et maintenance. Aucune modification apportée — uniquement des propositions, priorisées par impact et effort.</p>
+    </div>
+    <div class="cover-meta">
+      <span class="cover-mark"><span class="dot"></span> FAMRESA · PWA</span>
+      <div style="margin-top:18px">
+        <div><b>Scope</b> — dépôt complet</div>
+        <div><b>Fichiers lus</b> — 14 (clés)</div>
+        <div><b>Date</b> — 18 avril 2026</div>
+        <div><b>Verdict</b> — solide, <em>refactor en cours</em></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SCORECARD ============ -->
+  <section>
+    <h3>Scorecard</h3>
+    <div class="score-grid">
+      <div class="score good">
+        <div class="label">Produit & UX</div>
+        <div class="val">B+<small>/A</small></div>
+        <div class="note">Flux onboarding soigné, splash + skeleton cohérents, mode grande UI pour seniors. Quelques redondances à rationaliser.</div>
+      </div>
+      <div class="score warn">
+        <div class="label">Architecture</div>
+        <div class="val">C+<small>/B</small></div>
+        <div class="note">Cible <code>/modules</code> claire, mais la migration est incomplète : Firebase encore dispersé dans <code>js/</code>.</div>
+      </div>
+      <div class="score warn">
+        <div class="label">Sécurité Firestore</div>
+        <div class="val">C<small>/B</small></div>
+        <div class="note">Règles durcies sur les champs, mais l'<b>isolation par famille/uid manque</b> : tout signé‑in lit tout.</div>
+      </div>
+      <div class="score bad">
+        <div class="label">Dette technique</div>
+        <div class="val">High</div>
+        <div class="note"><code>style.css</code> 4 100 lignes, <code>booking.js</code> 1 273 lignes, fallbacks legacy partout, zéro tests.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TOP ISSUES ============ -->
+  <section>
+    <h2>Top 10 des améliorations</h2>
+    <p class="lede">Classées par impact × effort. Les 3 premières sont des <b>quick‑wins sécurité/perf</b>. Les suivantes accompagnent la migration déjà amorcée vers <code>/src/modules</code>.</p>
+    <div class="table">
+      <div class="row head">
+        <div>#</div><div>Zone</div><div>Ce qu'on voit / ce qu'on propose</div><div>Sévérité</div><div>Effort</div>
+      </div>
+
+      <div class="row">
+        <div class="id">01</div>
+        <div class="area">Sécurité Firestore<span>firestore.rules</span></div>
+        <div class="desc"><b>Tout utilisateur connecté lit toutes les collections.</b> Les règles vérifient la forme des écritures mais pas l'<b>appartenance</b>. Proposition : stocker un champ <code>famille_id</code> (déjà présent sur la plupart des docs) et ajouter <code>allow read: if signedIn() && resource.data.famille_id in getMyFamilies()</code>, avec une fonction helper qui lit <code>famille_membres</code>. Idem sur <code>profils</code> (exposer seulement les membres des mêmes familles).</div>
+        <div><span class="pill sev-high">High</span></div>
+        <div><span class="pill effort-m">M</span></div>
+      </div>
+
+      <div class="row">
+        <div class="id">02</div>
+        <div class="area">Conflits de réservation<span>booking.js + rules</span></div>
+        <div class="desc"><code>ARCHITECTURE.md §10</code> exige <code>runTransaction()</code> mais le front écrit directement via <code>reservationsRef().add()</code>. Risque de <b>double‑booking</b> sur clic simultané. Proposer : passer toutes les créations par <code>reservation.service.create()</code> qui fait <code>runTransaction</code> (lecture des overlaps + write atomique), et bloquer <code>create</code> côté règles si un overlap existe (ou déporter en Cloud Function).</div>
+        <div><span class="pill sev-high">High</span></div>
+        <div><span class="pill effort-l">L</span></div>
+      </div>
+
+      <div class="row">
+        <div class="id">03</div>
+        <div class="area">Secrets de config<span>firebase-config.js</span></div>
+        <div class="desc"><code>firebase-config.js</code> est exclu du git mais <b>exposé au client</b> (normal pour une web app Firebase). Vérifier qu'<b>App Check</b> est activé et que les quotas Firestore sont bornés — sans ça, une clé publique + règles laxistes = risque d'abus et de facturation. Ajouter une note explicite dans le README.</div>
+        <div><span class="pill sev-med">Med</span></div>
+        <div><span class="pill effort-s">S</span></div>
+      </div>
+
+      <div class="row">
+        <div class="id">04</div>
+        <div class="area">Séparation UI / métier<span>js/booking.js, resources.js…</span></div>
+        <div class="desc">Le contrat <code>ARCHITECTURE.md</code> est clair : <b>pas de Firebase dans l'UI</b>. Or <code>grep</code> montre ~30 appels <code>db.collection()</code> / <code>.doc()</code> directement dans <code>js/</code>, dont beaucoup en dehors de <code>migration.js</code> (qui est légitime). Proposer un <b>sprint de découpe</b> : chaque fichier <code>js/*.js</code> ne doit plus contenir que des handlers DOM + <code>await xxxService.xxx()</code>.</div>
+        <div><span class="pill sev-high">High</span></div>
+        <div><span class="pill effort-l">L</span></div>
+      </div>
+
+      <div class="row">
+        <div class="id">05</div>
+        <div class="area">Taille des fichiers<span>css/style.css, booking.js</span></div>
+        <div class="desc"><code>style.css</code> <b>4 100 lignes</b> dans un seul fichier, <code>booking.js</code> <b>1 273 lignes</b>. Découper en modules CSS (<code>tokens.css</code>, <code>layout.css</code>, <code>booking.css</code>, <code>planning.css</code>…) et composants JS. Côté perf, envisager des styles <b>critical inline</b> et le reste en <code>&lt;link&gt;</code> non‑bloquant.</div>
+        <div><span class="pill sev-med">Med</span></div>
+        <div><span class="pill effort-m">M</span></div>
+      </div>
+
+      <div class="row">
+        <div class="id">06</div>
+        <div class="area">Dette « legacy »<span>migration.js, fallbacks</span></div>
+        <div class="desc">Plusieurs écritures interrogent l'<i>ancien</i> schéma (<code>users</code>, <code>families/{id}/bookings</code>, <code>resource_access</code>) <b>en parallèle</b> du nouveau (<code>profils</code>, <code>reservations</code>, <code>acces_ressource</code>). Bon pour la compat, mauvais pour la lisibilité. Proposer : <b>dater la fin du support legacy</b>, ajouter un flag par famille (<code>disable_legacy_fallback: true</code> existe déjà !), scripter une migration one‑shot, puis <b>supprimer les branches</b>.</div>
+        <div><span class="pill sev-med">Med</span></div>
+        <div><span class="pill effort-m">M</span></div>
+      </div>
+
+      <div class="row">
+        <div class="id">07</div>
+        <div class="area">Tests<span>&lt;rien&gt;</span></div>
+        <div class="desc">Aucune suite de tests. Pour une app qui gère des réservations familiales (donc des <b>conflits de disponibilité</b>), c'est risqué. Ajouter au minimum : tests unitaires <code>reservation.service</code> (overlap, capacité, horaires), tests <code>firestore.rules</code> avec <code>@firebase/rules-unit-testing</code>, et 2‑3 smoke tests Playwright (login, créer/annuler résa).</div>
+        <div><span class="pill sev-med">Med</span></div>
+        <div><span class="pill effort-m">M</span></div>
+      </div>
+
+      <div class="row">
+        <div class="id">08</div>
+        <div class="area">PWA & perf<span>sw.js, index.html</span></div>
+        <div class="desc">Service worker correct (versionné, nettoyage des anciens caches). Améliorer : <b>stratégie <i>stale‑while‑revalidate</i></b> pour Firestore SDK, pré‑chargement explicite des polices en <code>&lt;link rel="preload"&gt;</code> au lieu du hack <code>media="print"</code> + <code>onload</code>, et déplacer les <code>&lt;style&gt;</code> inline dans <code>style.css</code>. Auditer Lighthouse — viser ≥ 90 partout.</div>
+        <div><span class="pill sev-low">Low</span></div>
+        <div><span class="pill effort-s">S</span></div>
+      </div>
+
+      <div class="row">
+        <div class="id">09</div>
+        <div class="area">Accessibilité<span>forms, icônes</span></div>
+        <div class="desc">Bons points : <code>aria-live</code>, <code>role="group"</code>, mode grande UI. Manques visibles : icônes en emoji comme seul libellé de ligne (profil), boutons fermeture <code>×</code> sans texte fallback sur certains overlays, contrastes <code>--text-muted: #b0afa9</code> sur fond clair sous le ratio 4.5. Faire une passe axe‑lint + contrast checker.</div>
+        <div><span class="pill sev-low">Low</span></div>
+        <div><span class="pill effort-s">S</span></div>
+      </div>
+
+      <div class="row">
+        <div class="id">10</div>
+        <div class="area">Design system<span>css/style.css</span></div>
+        <div class="desc">Tokens CSS bien pensés (couleurs, espacements, rayons, scale accessibilité) mais <b>non documentés</b>. Proposer un fichier <code>docs/DESIGN.md</code> ou une page <code>/styleguide.html</code> listant palette, types, composants (<code>.btn</code>, <code>.pill</code>, <code>.sheet</code>…). Aide humains + IA à rester cohérents.</div>
+        <div><span class="pill sev-low">Low</span></div>
+        <div><span class="pill effort-s">S</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ UX OBSERVATIONS ============ -->
+  <section>
+    <h2>Observations UX</h2>
+    <p class="lede">Basées sur <code>index.html</code> et <code>css/style.css</code>. Rien de cassé — des frictions à lisser.</p>
+    <div class="two">
+      <div class="card">
+        <div class="tag">Onboarding</div>
+        <h4>Double wizard, même intention</h4>
+        <p>Il existe <b>deux parcours</b> parallèles : <code>#first-resource-onboarding</code> (avec <code>.fro-*</code>) et le <code>#signup-overlay</code> (avec <code>.su-*</code>), qui posent tous les deux « Quel type de ressource ? → Nom famille → Nom ressource ».</p>
+        <ul>
+          <li>Fusionner en un seul flux stateful, piloté par <code>onboarding.service.js</code>.</li>
+          <li>Réutiliser les mêmes composants (photo picker, champ nom, progress dots).</li>
+          <li>Économie estimée : ~400 lignes de HTML/CSS/JS.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="tag">Planning / Réservation</div>
+        <h4>Le wizard masque trop le calendrier</h4>
+        <p>Le toggle <code>body.planning-booking-focus</code> cache header, onglets ressources, et agrandit la sticky‑stack. Bien pour la concentration, mais l'utilisateur perd le contexte « quelle ressource ? ».</p>
+        <ul>
+          <li>Garder un bandeau compact <b>ressource + dates choisies</b> en haut.</li>
+          <li>Le CTA « × fermer » devrait offrir <b>« Garder mes dates / Tout effacer »</b>.</li>
+          <li>Ajouter un fil d'Ariane <code>Dates → Personnes → Qui? → Destination</code>.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="tag">Dashboard</div>
+        <h4>Densité d'information inégale</h4>
+        <p>La carte hero affiche « Cette semaine » + strip 7 jours + CTA, c'est bien. Mais juste en dessous, les <b>infos maison / voiture</b> se dédoublent (<code>#house-info-card</code> + <code>#car-info-card</code> + <code>#car-info-grid</code>) avec beaucoup de « — » quand les champs ne sont pas remplis.</p>
+        <ul>
+          <li>Masquer les lignes vides plutôt que d'afficher « — ».</li>
+          <li>Ajouter un <b>progress de complétion</b> du profil ressource (déjà amorcé par <code>famresa-completion.js</code>).</li>
+          <li>Regrouper Assurance + CT + Réservoir dans une carte unique « État du véhicule ».</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="tag">Gamification</div>
+        <h4>XP présent dans le DOM mais caché</h4>
+        <p>Le hero XP (<code>#xp-hero-card</code>) est maintenu en <code>display:none</code> « pour compat JS ». Soit on l'assume et on le réintroduit (bandeau compact sur dashboard), soit on retire complètement le code mort.</p>
+        <ul>
+          <li>Décision produit à prendre. Tel quel = complexité sans valeur.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BEFORE / AFTER ============ -->
+  <section>
+    <h2>Deux exemples concrets</h2>
+    <p class="lede">Pour illustrer l'impact des propositions 01 et 04 — sans toucher au code du projet.</p>
+
+    <div class="ba" style="margin-bottom:16px">
+      <div class="before">
+        <h5>Avant — firestore.rules (extrait)</h5>
+<pre>match /reservations/{docId} {
+  allow read: if signedIn();
+  allow create: if signedIn()
+    && request.resource.data.keys()
+        .hasAll(['profil_id','startDate','endDate']);
+  …
+}</pre>
+        <div class="note">Tout compte authentifié peut lire <b>toutes</b> les réservations de toutes les familles.</div>
+      </div>
+      <div class="after">
+        <h5>Après — scope par famille</h5>
+<pre>function isMyFamily(fid) {
+  return exists(/databases/$(database)/documents/
+    famille_membres/$(request.auth.uid + '_' + fid));
+}
+
+match /reservations/{docId} {
+  allow read: if signedIn()
+    && isMyFamily(resource.data.famille_id);
+  allow create: if signedIn()
+    && isMyFamily(request.resource.data.famille_id)
+    && request.resource.data.profil_id == request.auth.uid;
+  …
+}</pre>
+        <div class="note">Suppose un doc <code>famille_membres/{uid}_{familleId}</code> indexable. Nécessite une petite migration + un seed côté <code>signUp</code>.</div>
+      </div>
+    </div>
+
+    <div class="ba">
+      <div class="before">
+        <h5>Avant — js/booking.js</h5>
+<pre>const ref = await reservationsRef().add({
+  profil_id: currentUser.id,
+  ressource_id: selectedResource,
+  startDate, endDate, …
+});
+// puis : appel UI de célébration</pre>
+        <div class="note">Pas de vérification d'overlap atomique. Deux clics simultanés = deux résas qui se chevauchent.</div>
+      </div>
+      <div class="after">
+        <h5>Après — appel service</h5>
+<pre>const res = await reservationService.create({
+  resourceId: selectedResource,
+  range: { start, end, startHour, endHour },
+  booker, participants
+});
+if (res.conflict) showConflictSheet(res.conflict);
+else celebrate(res.reservation);</pre>
+        <div class="note">Le service fait <code>runTransaction()</code> : lit les résas de la plage, valide capacité, écrit si libre. UI reste bête.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ROADMAP ============ -->
+  <section>
+    <h2>Proposition de roadmap</h2>
+    <p class="lede">3 itérations de 2 semaines chacune. Aucune casse utilisateur — tout se fait derrière les services existants.</p>
+    <div class="roadmap">
+      <div class="road">
+        <div class="wk">Sprint 01 · Sécurité</div>
+        <h4>Durcir les règles</h4>
+        <ol>
+          <li><b>Ajouter <code>famille_id</code></b> sur toute réservation/ressource et scoper les lectures.</li>
+          <li>Activer <b>App Check</b> (reCAPTCHA v3 web).</li>
+          <li>Suite de tests <code>rules-unit-testing</code> (10 cas).</li>
+          <li>Auditer <b>quotas Firestore</b> + budget alerts.</li>
+        </ol>
+      </div>
+      <div class="road">
+        <div class="wk">Sprint 02 · Architecture</div>
+        <h4>Finir la migration services</h4>
+        <ol>
+          <li>Extraire tout <code>db.collection()</code> de <code>js/</code> vers <code>/src/modules/*</code>.</li>
+          <li><b>reservation.service</b> avec <code>runTransaction</code> pour overlap.</li>
+          <li>Supprimer les branches legacy (<code>users</code>, <code>families/{id}/bookings</code>).</li>
+          <li>Découper <code>style.css</code> et <code>booking.js</code>.</li>
+        </ol>
+      </div>
+      <div class="road">
+        <div class="wk">Sprint 03 · Polish</div>
+        <h4>UX + PWA + DS</h4>
+        <ol>
+          <li>Fusion des deux onboardings en un seul.</li>
+          <li>Fil d'Ariane dans le wizard de réservation.</li>
+          <li>Page <code>/styleguide.html</code> (tokens, composants).</li>
+          <li>Audit Lighthouse & correctifs a11y.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ QUICK WINS ============ -->
+  <section>
+    <h2>Quick‑wins (moins d'½ journée chacun)</h2>
+    <div class="two">
+      <div class="card">
+        <div class="tag">DX</div>
+        <h4>Un <code>CLAUDE.md</code> / <code>.codex.md</code> à la racine</h4>
+        <p>Vos docs <code>AI_GUIDE.md</code> / <code>DEV_RULES.md</code> sont parfaites — mais un <code>CLAUDE.md</code> à la racine force <b>toute IA</b> à les lire en premier. Ajouter aussi <code>npm run lint</code> (ESLint + stylelint) et <code>npm run check</code>.</p>
+      </div>
+      <div class="card">
+        <div class="tag">Qualité</div>
+        <h4>Ajouter un <code>CHANGELOG.md</code></h4>
+        <p><code>version.js</code> existe déjà et alimente le cache SW. Documenter chaque bump évitera les incidents côté PWA (runbook déjà bien écrit — le relier au changelog).</p>
+      </div>
+      <div class="card">
+        <div class="tag">Sécu</div>
+        <h4>Retirer <code>admin-profiles-audit.html</code> du dépôt public</h4>
+        <p>Même en lecture seule + login, une page d'audit servie depuis GitHub Pages n'a rien à faire au même endroit que le reste. Déplacer sous <code>/admin/</code> protégé par un <code>noindex</code> + Firebase Hosting rewrites.</p>
+      </div>
+      <div class="card">
+        <div class="tag">Perf</div>
+        <h4>Pré‑load des polices + <code>font-display: swap</code></h4>
+        <p>Aujourd'hui <code>media="print" onload="this.media='all'"</code>. Préférer <code>&lt;link rel="preload" as="font" crossorigin&gt;</code> pour les 2 graisses critiques (400 / 600) + fallback local <code>-apple-system</code> déjà en place.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SUMMARY ============ -->
+  <section>
+    <div class="callout">
+      <div class="icon">✓</div>
+      <p><b>TL;DR —</b> FamResa est un projet sain, avec une ambition d'architecture claire et une UX mobile soignée. Les trois chantiers à lancer en priorité : <b>(1) scoper les règles Firestore par famille</b>, <b>(2) finir la migration <code>js/ → src/modules/</code></b> avec une vraie transaction sur les réservations, <b>(3) découper <code>style.css</code> et <code>booking.js</code></b>. Le reste est du confort — important mais pas bloquant.</p>
+    </div>
+  </section>
+
+  <footer>
+    <div>FamResa · Audit lecture seule · aucun fichier modifié</div>
+    <div>v1 · 18.04.2026</div>
+  </footer>
+
+</div>
+</body>
+</html>
