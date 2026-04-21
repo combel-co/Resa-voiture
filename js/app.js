@@ -18,6 +18,8 @@ let activeTab = 'dashboard';
 let fuelReportsByBooking = {};
 let pendingFuelPromptBookingId = null;
 let suPendingFamilyId = null;
+/** Voiture : par date YYYY-MM-DD, toutes les réservations qui couvrent ce jour (créneaux partiels). */
+let carBookingsByDate = {};
 window._legacyFallbackAllowed = true;
 /** Set from dashboard "Réserver" — consumed on first free-day tap in planning (entre direct en flux réservation). */
 window._planningBookingMode = false;
@@ -33,6 +35,12 @@ function switchToBookingMode() {
 
 function setBottomNavBookingActive(active) {
   document.querySelector('.bottom-nav')?.classList.toggle('booking-active', !!active);
+}
+
+/** Date locale YYYY-MM-DD (évite le décalage UTC de toISOString pour « aujourd’hui »). */
+function localTodayDateStr(d) {
+  const t = d instanceof Date ? d : new Date();
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
 }
 
 function isLegacyFallbackAllowed() {

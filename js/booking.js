@@ -589,8 +589,17 @@ function bmApplyDaySelection(ds) {
   const res = resources.find((r) => r.id === selectedResource);
   const cap = typeof getResourceHouseCapacityNumber === 'function' ? getResourceHouseCapacityNumber(res) : null;
   const need = Math.max(1, Number(bm.personTotal) || 1);
-  const dayOk =
-    typeof houseStayHasRoomFor === 'function' ? houseStayHasRoomFor(ds, need) : !bookings[ds];
+  let dayOk = false;
+  if (res?.type === 'car') {
+    if (typeof reservationService !== 'undefined' && typeof carBookingsByDate !== 'undefined') {
+      dayOk = reservationService.carDayHasFreeSlot(carBookingsByDate, ds, 30);
+    } else {
+      dayOk = !bookings[ds];
+    }
+  } else {
+    dayOk =
+      typeof houseStayHasRoomFor === 'function' ? houseStayHasRoomFor(ds, need) : !bookings[ds];
+  }
   if (!dayOk) {
     if (typeof showToast === 'function') {
       showToast(
@@ -813,6 +822,13 @@ async function confirmRangeBooking() {
     return;
   }
 
+  if (!bm.endDate) {
+    if (typeof showToast === 'function') {
+      showToast('Choisis une date de début et une date de fin sur le calendrier.');
+    }
+    return;
+  }
+
   const res = resources.find(r => r.id === selectedResource);
   const isHouse = res && res.type === 'house';
 
@@ -829,21 +845,22 @@ async function confirmRangeBooking() {
       userName: booker.name,
       photo: booker.photo,
       startDate: bm.startDate,
-      endDate: bm.endDate || bm.startDate,
+      endDate: bm.endDate,
       startHour: bm.startHour || '09:00',
       endHour: bm.endHour || '20:00',
       destinations: bm.destinations,
       bookings,
+      carBookingsByDate: typeof carBookingsByDate !== 'undefined' ? carBookingsByDate : undefined,
       createdBy: booker.createdBy
     });
 
     if (result.error === 'conflict') {
-      showToast('Ce jour est déjà réservé');
+      showToast('Ce créneau chevauche une autre réservation (vérifie les heures).');
       return;
     }
 
     window.__lastCelebrationRecap = bmBuildCelebrationRecap(res, res?.emoji || '🚗');
-    const sub = `${formatBmSubtitleRange(bm.startDate, bm.endDate || bm.startDate)}`;
+    const sub = `${formatBmSubtitleRange(bm.startDate, bm.endDate)}`;
     if (typeof afterBookingSuccess === 'function') afterBookingSuccess(bm.startDate);
     celebrate(
       res?.emoji || '🚗',
@@ -861,8 +878,12 @@ async function confirmRangeBooking() {
 
 async function createStay() {
   if (!currentUser || !bm.startDate) return;
+  if (!bm.endDate) {
+    showToast('Choisis une date de fin (ou le même jour deux fois pour un jour sans nuitée).');
+    return;
+  }
   const startDate = bm.startDate;
-  const endDate = bm.endDate || bm.startDate;
+  const endDate = bm.endDate;
   const motif = document.getElementById('bm-motif-input')?.value.trim() || '';
 
   try {
@@ -914,14 +935,6 @@ async function createStay() {
   } catch(e) { showToast('Erreur — réessayez'); }
 }
 
-function bmEnsureDefaultEndForNext() {
-  if (!bm.startDate) return;
-  if (bm.endDate) return;
-  const s = new Date(bm.startDate + 'T00:00:00');
-  s.setDate(s.getDate() + 1);
-  bm.endDate = `${s.getFullYear()}-${String(s.getMonth() + 1).padStart(2, '0')}-${String(s.getDate()).padStart(2, '0')}`;
-}
-
 function initWizardAfterDates() {
   bmIsAdmin = window._myResourceRoles && window._myResourceRoles[selectedResource] === 'admin';
   const res = resources.find((r) => r.id === selectedResource);
@@ -938,12 +951,15 @@ function initWizardAfterDates() {
 }
 
 function formatBmSubtitleRange(startDate, endDate) {
-  const nights = countStayNights(startDate, endDate);
-  const n = Math.max(1, nights);
   const sd = new Date(startDate + 'T00:00:00');
   const ed = new Date(endDate + 'T00:00:00');
   const a = sd.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
   const b = ed.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+  if (startDate === endDate) {
+    return `${a} · 1 jour`;
+  }
+  const nights = countStayNights(startDate, endDate);
+  const n = Math.max(1, nights);
   return `${a} → ${b} · ${n} ${n > 1 ? 'nuits' : 'nuit'}`;
 }
 
@@ -1256,9 +1272,14 @@ async function saveEditedBooking() {
       startHour: bm.startHour || '09:00',
       endHour: bm.endHour || '20:00'
     };
-    const result = await reservationService.updateReservation(_editingBookingId, updates, bookings);
+    const result = await reservationService.updateReservation(
+      _editingBookingId,
+      updates,
+      bookings,
+      typeof carBookingsByDate !== 'undefined' ? carBookingsByDate : undefined
+    );
     if (result.error === 'conflict') {
-      showToast('Ce jour est déjà réservé');
+      showToast(result.message || 'Ce créneau chevauche une autre réservation.');
       return;
     }
     _editingBookingId = null;

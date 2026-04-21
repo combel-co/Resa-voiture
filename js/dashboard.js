@@ -1,6 +1,9 @@
 // ==========================================
 // DASHBOARD — EXPERIENCE PANELS
 // ==========================================
+/** Afficher le bandeau trajet / séjour pour les résas à venir dans cette fenêtre (jours calendaires). */
+const TRIP_BANNER_UPCOMING_MAX_DAYS = 45;
+
 function formatRelativeDate(dateStr) {
   if (!dateStr) return '';
   const today = new Date();
@@ -23,7 +26,7 @@ function getResourceBookingForDate(dateStr, resourceId) {
 
 function getCurrentResourceBookingState(resourceId) {
   const today = new Date();
-  const todayStr = today.toISOString().slice(0, 10);
+  const todayStr = typeof localTodayDateStr === 'function' ? localTodayDateStr(today) : today.toISOString().slice(0, 10);
   const todayBooking = getResourceBookingForDate(todayStr, resourceId);
   if (todayBooking) {
     const end = todayBooking.endDate || todayBooking.date_fin || todayStr;
@@ -67,7 +70,7 @@ function renderTripBanner(resourceId) {
   const res = resources.find((r) => r.id === resourceId);
   const isHouse = res?.type === 'house';
   const today = new Date();
-  const todayStr = today.toISOString().slice(0, 10);
+  const todayStr = typeof localTodayDateStr === 'function' ? localTodayDateStr(today) : today.toISOString().slice(0, 10);
   const todayMidnightMs = new Date(todayStr + 'T00:00:00').getTime();
 
   const { currentMine, targetBooking } = resolveTripTargetBooking(resourceId);
@@ -85,7 +88,7 @@ function renderTripBanner(resourceId) {
   const diffDays = Math.ceil((start.getTime() - todayMidnightMs) / 86400000);
   const isInProgress = !!currentMine;
 
-  if (!isInProgress && (diffDays < 0 || diffDays > 7)) {
+  if (!isInProgress && (diffDays < 0 || diffDays > TRIP_BANNER_UPCOMING_MAX_DAYS)) {
     banner.style.display = 'none';
     banner.onclick = null;
     banner.onkeydown = null;
@@ -93,17 +96,21 @@ function renderTripBanner(resourceId) {
     return false;
   }
 
-  const nights = Math.max(
-    1,
-    typeof countStayNights === 'function'
-      ? countStayNights(startDateStr, endDate)
-      : Math.round((new Date(endDate + 'T12:00:00') - new Date(startDateStr + 'T12:00:00')) / 86400000)
-  );
   const startH = targetBooking.startHour || '09:00';
   const endH = targetBooking.endHour || '20:00';
   let tripSubLine;
   if (isHouse) {
-    tripSubLine = `${formatRelativeDate(startDateStr)} → ${formatRelativeDate(endDate)} · ${nights} nuit${nights > 1 ? 's' : ''}`;
+    if (startDateStr === endDate) {
+      tripSubLine = `${formatRelativeDate(startDateStr)} · 1 jour`;
+    } else {
+      const nights = Math.max(
+        1,
+        typeof countStayNights === 'function'
+          ? countStayNights(startDateStr, endDate)
+          : Math.round((new Date(endDate + 'T12:00:00') - new Date(startDateStr + 'T12:00:00')) / 86400000)
+      );
+      tripSubLine = `${formatRelativeDate(startDateStr)} → ${formatRelativeDate(endDate)} · ${nights} nuit${nights > 1 ? 's' : ''}`;
+    }
   } else {
     const d0 = new Date(startDateStr + 'T00:00:00');
     const dayLong = d0.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -151,7 +158,7 @@ function getDashboardTripContext(resourceId) {
   const res = resources.find((r) => r.id === resourceId);
   const isHouse = res?.type === 'house';
   const today = new Date();
-  const todayStr = today.toISOString().slice(0, 10);
+  const todayStr = typeof localTodayDateStr === 'function' ? localTodayDateStr(today) : today.toISOString().slice(0, 10);
   const todayMidnightMs = new Date(todayStr + 'T00:00:00').getTime();
 
   const { currentMine, upcomingMine, targetBooking } = resolveTripTargetBooking(resourceId);
@@ -160,7 +167,7 @@ function getDashboardTripContext(resourceId) {
   const start = new Date(startDateStr + 'T00:00:00');
   const diffDays = Math.ceil((start.getTime() - todayMidnightMs) / 86400000);
   const isInProgress = !!currentMine;
-  if (!isInProgress && (diffDays < 0 || diffDays > 7)) return null;
+  if (!isInProgress && (diffDays < 0 || diffDays > TRIP_BANNER_UPCOMING_MAX_DAYS)) return null;
   return { targetBooking, isInProgress, isHouse, res, currentMine, upcomingMine };
 }
 window.getDashboardTripContext = getDashboardTripContext;
@@ -172,7 +179,7 @@ function getHousePeopleCount(booking) {
 
 function getHouseDecisionState(resourceId) {
   const today = new Date();
-  const todayStr = today.toISOString().slice(0, 10);
+  const todayStr = typeof localTodayDateStr === 'function' ? localTodayDateStr(today) : today.toISOString().slice(0, 10);
   const todayMidnightMs = new Date(todayStr + 'T00:00:00').getTime();
   const state = getCurrentResourceBookingState(resourceId);
   const currentBooking = state.occupied ? state.booking : null;

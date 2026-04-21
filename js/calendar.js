@@ -203,11 +203,6 @@ function enterPlanningReserveFromPrompt(dateStr) {
   if (bar) {
     bar.style.display = 'flex';
     document.getElementById('tab-calendar')?.classList.add('planning-has-action-bar');
-    const right = document.getElementById('planning-action-right');
-    if (right) {
-      right.disabled = false;
-      right.classList.remove('is-disabled');
-    }
   }
   if (typeof setBottomNavBookingActive === 'function') setBottomNavBookingActive(true);
   onPlanningDatesChanged();
@@ -223,7 +218,15 @@ function planningActionEffacer() {
 }
 
 function planningSuivantFromDates() {
-  if (typeof bmEnsureDefaultEndForNext === 'function') bmEnsureDefaultEndForNext();
+  if (typeof bmGetSelection === 'function') {
+    const sel = bmGetSelection();
+    if (!sel.startDate || !sel.endDate) {
+      if (typeof showToast === 'function') {
+        showToast('Choisis une date de début et une date de fin sur le calendrier.');
+      }
+      return;
+    }
+  }
   _planningPhase = 'wizard';
   _planningCalendarCollapsed = true;
   const calBlock = document.getElementById('planning-calendar-block');
@@ -298,10 +301,15 @@ function onPlanningDatesChanged() {
     if (!right) return;
     if (_planningPhase !== 'reserve' || typeof bmGetSelection !== 'function') {
       right.classList.remove('planning-action-right--ready');
+      right.disabled = false;
+      right.classList.remove('is-disabled');
       return;
     }
     const sel = bmGetSelection();
-    right.classList.toggle('planning-action-right--ready', !!(sel.startDate && sel.endDate));
+    const complete = !!(sel.startDate && sel.endDate);
+    right.classList.toggle('planning-action-right--ready', complete);
+    right.disabled = !complete;
+    right.classList.toggle('is-disabled', !complete);
   };
 
   if (!hint) {
@@ -350,7 +358,7 @@ function onPlanningDatesChanged() {
   const b = ed.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
   subEl.textContent =
     sel.startDate === sel.endDate
-      ? `1 nuit · ${a}`
+      ? `1 jour · ${a}`
       : `${n} nuit${n > 1 ? 's' : ''} · ${a} → ${b}`;
   subEl.removeAttribute('hidden');
   syncReserveActionRightReady();
@@ -412,6 +420,13 @@ function renderCalendar() {
           const occ = houseStayOccupancyByDate[dateStr];
           const tot = occ && typeof occ.totalPeople === 'number' ? occ.totalPeople : 0;
           if (tot > 0 && tot < calCap) classes.push('bm-day--partial');
+        } else if (
+          !calIsHouse &&
+          typeof reservationService !== 'undefined' &&
+          typeof carBookingsByDate !== 'undefined' &&
+          reservationService.carDayHasFreeSlot(carBookingsByDate, dateStr, 30)
+        ) {
+          classes.push('bm-day--partial');
         }
       }
 
@@ -434,10 +449,14 @@ function renderCalendar() {
 
       const inReserve = _planningPhase === 'reserve';
       const clickableConsult = _planningPhase === 'consult' && !isPast;
-      let canReserveThisDay =
-        calIsHouse && calCap != null && typeof houseStayHasRoomFor === 'function'
-          ? houseStayHasRoomFor(dateStr, needPeople)
-          : !booking;
+      let canReserveThisDay = false;
+      if (calIsHouse && calCap != null && typeof houseStayHasRoomFor === 'function') {
+        canReserveThisDay = houseStayHasRoomFor(dateStr, needPeople);
+      } else if (!calIsHouse && typeof reservationService !== 'undefined' && typeof carBookingsByDate !== 'undefined') {
+        canReserveThisDay = reservationService.carDayHasFreeSlot(carBookingsByDate, dateStr, 30);
+      } else {
+        canReserveThisDay = !booking;
+      }
       const clickableReserve = inReserve && !isPast && canReserveThisDay;
 
       let onAction = 'aria-disabled="true" tabindex="-1"';

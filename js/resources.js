@@ -668,6 +668,35 @@ function subscribeBookings() {
       houseStaySheetRowsByDate = {};
     }
 
+    if (typeof carBookingsByDate !== 'undefined') {
+      if (res && res.type === 'car') {
+        carBookingsByDate = {};
+        const byCarId = new Map();
+        for (const d of _allDocsLegacy) {
+          if (d.id) byCarId.set(d.id, d);
+        }
+        for (const d of _allDocsNew) {
+          if (d.id) byCarId.set(d.id, d);
+        }
+        for (const d of byCarId.values()) {
+          if (d.returnedAt) continue;
+          const start = d.startDate || d.date_debut;
+          const end = d.endDate || d.date_fin || start;
+          if (!start) continue;
+          let cur = new Date(start + 'T00:00:00');
+          const endObj = new Date(end + 'T00:00:00');
+          while (cur <= endObj) {
+            const ds = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`;
+            if (!carBookingsByDate[ds]) carBookingsByDate[ds] = [];
+            carBookingsByDate[ds].push(d);
+            cur.setDate(cur.getDate() + 1);
+          }
+        }
+      } else {
+        carBookingsByDate = {};
+      }
+    }
+
     renderCalendar();
     renderExperiencePanels();
     _hydrateCurrentBookingPhotos().catch(() => {});

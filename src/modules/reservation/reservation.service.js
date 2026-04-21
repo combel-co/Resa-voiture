@@ -41,13 +41,118 @@ const reservationService = {
     return null;
   },
 
+  _hmToMinutes(hm) {
+    const parts = String(hm || '09:00').trim().split(':');
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1] || '0', 10);
+    const hh = Number.isFinite(h) ? h : 9;
+    const mm = Number.isFinite(m) ? m : 0;
+    return hh * 60 + mm;
+  },
+
+  /**
+   * Plage [startMin, endMin) en minutes depuis minuit pour une résa voiture sur un jour donné.
+   * @returns {[number, number]|null}
+   */
+  carIntervalMinutesOnDay(booking, dateStr) {
+    const sd = booking.startDate || booking.date_debut;
+    const ed = booking.endDate || booking.date_fin || sd;
+    if (!sd || !dateStr || dateStr < sd || dateStr > ed) return null;
+    const dayMin = 0;
+    const dayMax = 24 * 60;
+    const sh = this._hmToMinutes(booking.startHour || '09:00');
+    const ehRaw = booking.endHour != null && String(booking.endHour).trim() !== '' ? booking.endHour : '20:00';
+    let eh = this._hmToMinutes(ehRaw);
+    if (eh <= 0) eh = dayMax;
+    if (sd === ed) {
+      const a = Math.max(dayMin, Math.min(sh, dayMax));
+      const b = Math.max(a + 1, Math.min(eh, dayMax));
+      return [a, b];
+    }
+    if (dateStr === sd) {
+      return [Math.max(dayMin, sh), dayMax];
+    }
+    if (dateStr === ed) {
+      const b = Math.max(dayMin + 1, Math.min(eh, dayMax));
+      return [dayMin, b];
+    }
+    return [dayMin, dayMax];
+  },
+
+  _mergeMinuteIntervals(intervals) {
+    const arr = intervals
+      .filter((iv) => iv && iv[1] > iv[0])
+      .map(([a, b]) => [a, b])
+      .sort((x, y) => x[0] - y[0]);
+    const out = [];
+    for (const [s, e] of arr) {
+      if (!out.length || s > out[out.length - 1][1]) out.push([s, e]);
+      else out[out.length - 1][1] = Math.max(out[out.length - 1][1], e);
+    }
+    return out;
+  },
+
+  /**
+   * Jour encore réservable en voiture s’il reste au moins minGapMinutes hors des plages existantes.
+   */
+  carDayHasFreeSlot(carBookingsByDate, dateStr, minGapMinutes) {
+    const gap = Math.max(15, Number(minGapMinutes) || 30);
+    const list = (carBookingsByDate && carBookingsByDate[dateStr]) || [];
+    if (!list.length) return true;
+    const parts = [];
+    for (const b of list) {
+      if (b.returnedAt) continue;
+      const iv = this.carIntervalMinutesOnDay(b, dateStr);
+      if (iv) parts.push(iv);
+    }
+    if (!parts.length) return true;
+    const merged = this._mergeMinuteIntervals(parts);
+    if (merged[0][0] > gap) return true;
+    for (let i = 0; i < merged.length - 1; i++) {
+      if (merged[i + 1][0] - merged[i][1] >= gap) return true;
+    }
+    if (24 * 60 - merged[merged.length - 1][1] >= gap) return true;
+    return false;
+  },
+
+  /**
+   * @returns {string|null} date en conflit ou null
+   */
+  checkCarTimeConflict(startDate, endDate, startHour, endHour, carBookingsByDate, excludeBookingId) {
+    if (!carBookingsByDate || typeof carBookingsByDate !== 'object') return null;
+    const probe = { startDate, endDate, startHour, endHour };
+    const cur = new Date(startDate + 'T00:00:00');
+    const endObj = new Date(endDate + 'T00:00:00');
+    while (cur <= endObj) {
+      const ds = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`;
+      const newIv = this.carIntervalMinutesOnDay(probe, ds);
+      if (newIv) {
+        const list = carBookingsByDate[ds] || [];
+        for (const b of list) {
+          if (b.returnedAt) continue;
+          if (excludeBookingId && b.id === excludeBookingId) continue;
+          const exIv = this.carIntervalMinutesOnDay(b, ds);
+          if (!exIv) continue;
+          if (newIv[0] < exIv[1] && exIv[0] < newIv[1]) return ds;
+        }
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+    return null;
+  },
+
   /**
    * Create a car reservation.
    * @returns {{ success, xpGained, kmEstimate, destinations } | { error, date }}
    */
-  async createCarReservation({ resourceId, userId, userName, photo, startDate, endDate, startHour, endHour, destinations, bookings, createdBy }) {
-    const conflict = this.checkConflicts(startDate, endDate, bookings);
-    if (conflict) return { error: 'conflict', date: conflict };
+  async createCarReservation({ resourceId, userId, userName, photo, startDate, endDate, startHour, endHour, destinations, bookings, carBookingsByDate, createdBy }) {
+    let conflictDate = null;
+    if (carBookingsByDate && typeof carBookingsByDate === 'object') {
+      conflictDate = this.checkCarTimeConflict(startDate, endDate, startHour, endHour, carBookingsByDate, null);
+    } else if (bookings) {
+      conflictDate = this.checkConflicts(startDate, endDate, bookings);
+    }
+    if (conflictDate) return { error: 'conflict', date: conflictDate };
 
     const kmEstimate = destinations.reduce((s, d) => s + d.km * 2, 0);
 
@@ -210,7 +315,7 @@ const reservationService = {
    * Update a car reservation (destination, dates, hours).
    * @returns {{ success: true } | { error, message }}
    */
-  async updateReservation(bookingId, updates, bookings) {
+  async updateReservation(bookingId, updates, bookings, carBookingsByDate) {
     const allowed = {};
     if (updates.destinations !== undefined) {
       allowed.destinations = updates.destinations.map(d => ({ name: d.name, kmFromParis: d.km || d.kmFromParis }));
@@ -228,11 +333,21 @@ const reservationService = {
     if (updates.startHour !== undefined) allowed.startHour = updates.startHour;
     if (updates.endHour !== undefined) allowed.endHour = updates.endHour;
 
-    // Check date conflicts if dates changed (exclude current booking)
-    if (allowed.startDate || allowed.endDate) {
-      const start = allowed.startDate || updates.currentStartDate;
-      const end = allowed.endDate || updates.currentEndDate;
-      if (start && end && bookings) {
+    const start = allowed.startDate ?? updates.startDate;
+    const end = allowed.endDate ?? updates.endDate;
+    const sh = allowed.startHour ?? updates.startHour ?? '09:00';
+    const eh = allowed.endHour ?? updates.endHour ?? '20:00';
+    const datesOrHoursTouched =
+      allowed.startDate !== undefined ||
+      allowed.endDate !== undefined ||
+      allowed.startHour !== undefined ||
+      allowed.endHour !== undefined;
+
+    if (start && end && datesOrHoursTouched) {
+      if (carBookingsByDate && typeof carBookingsByDate === 'object') {
+        const bad = this.checkCarTimeConflict(start, end, sh, eh, carBookingsByDate, bookingId);
+        if (bad) return { error: 'conflict', message: 'Créneau en conflit avec une autre réservation', date: bad };
+      } else if (bookings) {
         const cur = new Date(start + 'T00:00:00');
         const endObj = new Date(end + 'T00:00:00');
         while (cur <= endObj) {
