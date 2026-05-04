@@ -770,8 +770,23 @@ function switchBookerTab(tab) {
     if (memberList) memberList.style.display = 'none';
     if (externalDiv) externalDiv.style.display = '';
     const ni = document.getElementById('bm-external-name'); if (ni) ni.value = '';
+    bm.externalGuestCount = 1;
+    const gc = document.getElementById('bm-external-guest-count');
+    if (gc) gc.textContent = '1';
   }
   renderBmSteps();
+}
+
+function incrementExternalGuests() {
+  bm.externalGuestCount = (bm.externalGuestCount || 1) + 1;
+  const el = document.getElementById('bm-external-guest-count');
+  if (el) el.textContent = bm.externalGuestCount;
+}
+
+function decrementExternalGuests() {
+  bm.externalGuestCount = Math.max(1, (bm.externalGuestCount || 1) - 1);
+  const el = document.getElementById('bm-external-guest-count');
+  if (el) el.textContent = bm.externalGuestCount;
 }
 
 function onExternalNameInput(val) {
@@ -889,7 +904,9 @@ async function createStay() {
   try {
     const external = bm.bookerTab === 'external';
     const booker = external ? _resolveBooker() : _resolveHouseStayBooker();
-    const peopleCount = Math.max(1, Number(bm.personTotal) || 1);
+    const peopleCount = external
+      ? Math.max(1, Number(bm.externalGuestCount) || 1)
+      : Math.max(1, Number(bm.personTotal) || 1);
     const resMeta = resources.find((r) => r.id === selectedResource);
     const capNum = typeof getResourceHouseCapacityNumber === 'function' ? getResourceHouseCapacityNumber(resMeta) : null;
     const result = await reservationService.createStayReservation({

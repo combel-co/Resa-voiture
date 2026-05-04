@@ -570,6 +570,7 @@ function showOccupiedDaySheetH4(dateStr, booking) {
       ? houseStaySheetRowsByDate[dateStr]
       : null;
   const useHouseMulti = !!(isHouse && sheetRows && sheetRows.length > 0);
+  const isAdmin = !!(window._myResourceRoles && window._myResourceRoles[selectedResource] === 'admin');
 
   const cap =
     typeof getResourceHouseCapacityNumber === 'function' ? getResourceHouseCapacityNumber(res) : null;
@@ -631,7 +632,13 @@ function showOccupiedDaySheetH4(dateStr, booking) {
             ? `<span class="h4-invite-pill" aria-label="${inviteN} invité${inviteN > 1 ? 's' : ''}">+${inviteN}</span>`
             : '';
 
-        return `<div class="h4-stay-row-outer"><div class="h4-stay-row-card"><div class="h4-stay-row-main"><div class="h4-avatar-wrap${meWrap}">${av}</div><div class="h4-stay-row-text"><div class="h4-stay-row-name">${nameEsc}</div><div class="h4-stay-row-dates">${subRow}</div></div></div></div>${pill ? `<div class="h4-stay-row-pill-wrap">${pill}</div>` : ''}</div>`;
+        const rowGid = _h4SafeOnclickId(row.reservationGroupId);
+        const rowBid = _h4SafeOnclickId(row.bookingId);
+        const adminRowActions = isAdmin
+          ? `<div style="display:flex;gap:16px;padding:2px 0 4px 48px"><button type="button" style="background:none;border:none;color:#2d6a4f;font-size:12px;cursor:pointer;padding:0;text-decoration:underline" onclick="showEditStayFromSheet('${rowGid}','${rowBid}')">Modifier</button><button type="button" style="background:none;border:none;color:#c0392b;font-size:12px;cursor:pointer;padding:0;text-decoration:underline" onclick="showCancelStayConfirmSheet('${rowGid}','${rowBid}','${rs}','${re}',true)">Annuler</button></div>`
+          : '';
+
+        return `<div class="h4-stay-row-outer"><div class="h4-stay-row-card"><div class="h4-stay-row-main"><div class="h4-avatar-wrap${meWrap}">${av}</div><div class="h4-stay-row-text"><div class="h4-stay-row-name">${nameEsc}</div><div class="h4-stay-row-dates">${subRow}</div></div></div></div>${pill ? `<div class="h4-stay-row-pill-wrap">${pill}</div>` : ''}${adminRowActions}</div>`;
       })
       .join('');
 
@@ -707,7 +714,7 @@ function showOccupiedDaySheetH4(dateStr, booking) {
   }
 
   let actions = `<button type="button" class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">Fermer</button>`;
-  if (isMine) {
+  if (isMine || isAdmin) {
     actions = `
       <button type="button" class="btn btn-primary" style="width:100%;background:#2d6a4f;margin-top:12px" onclick="showEditStayFromSheet('${booking.reservationGroupId || ''}','${booking.id}')">Modifier la réservation</button>
       <button type="button" style="width:100%;margin-top:12px;background:none;border:none;color:#c0392b;font-size:14px;cursor:pointer" onclick="showCancelStayConfirmSheet('${booking.reservationGroupId || ''}','${booking.id}','${startDate}','${endDate}',${isHouse})">Annuler la réservation</button>

@@ -394,6 +394,14 @@
               <label for="bm-external-name">Nom de l'invité</label>
               <input type="text" id="bm-external-name" name="bm-external-name" placeholder="Nom de l'invité" autocomplete="off" oninput="onExternalNameInput(this.value)">
             </div>
+            <div class="bm-personnes-stepper" style="margin-top:16px">
+              <span style="font-size:14px;color:#2d2a24">Nombre d'invités</span>
+              <div style="display:flex;align-items:center;gap:12px">
+                <button type="button" class="bm-guest-btn" onclick="decrementExternalGuests()" aria-label="Moins d'invités">−</button>
+                <span id="bm-external-guest-count" style="font-size:16px;font-weight:600;min-width:20px;text-align:center">1</span>
+                <button type="button" class="bm-guest-btn" onclick="incrementExternalGuests()" aria-label="Plus d'invités">+</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
