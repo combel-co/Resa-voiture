@@ -770,8 +770,23 @@ function switchBookerTab(tab) {
     if (memberList) memberList.style.display = 'none';
     if (externalDiv) externalDiv.style.display = '';
     const ni = document.getElementById('bm-external-name'); if (ni) ni.value = '';
+    bm.externalGuestCount = 1;
+    const gc = document.getElementById('bm-external-guest-count');
+    if (gc) gc.textContent = '1';
   }
   renderBmSteps();
+}
+
+function incrementExternalGuests() {
+  bm.externalGuestCount = (bm.externalGuestCount || 1) + 1;
+  const el = document.getElementById('bm-external-guest-count');
+  if (el) el.textContent = bm.externalGuestCount;
+}
+
+function decrementExternalGuests() {
+  bm.externalGuestCount = Math.max(1, (bm.externalGuestCount || 1) - 1);
+  const el = document.getElementById('bm-external-guest-count');
+  if (el) el.textContent = bm.externalGuestCount;
 }
 
 function onExternalNameInput(val) {
@@ -889,7 +904,9 @@ async function createStay() {
   try {
     const external = bm.bookerTab === 'external';
     const booker = external ? _resolveBooker() : _resolveHouseStayBooker();
-    const peopleCount = Math.max(1, Number(bm.personTotal) || 1);
+    const peopleCount = external
+      ? Math.max(1, Number(bm.externalGuestCount) || 1)
+      : Math.max(1, Number(bm.personTotal) || 1);
     const resMeta = resources.find((r) => r.id === selectedResource);
     const capNum = typeof getResourceHouseCapacityNumber === 'function' ? getResourceHouseCapacityNumber(resMeta) : null;
     const result = await reservationService.createStayReservation({
@@ -1186,7 +1203,11 @@ function openEditBookingModal(bookingId) {
   const pc = booking.peopleCount || 1 + (Number(booking.guestCount) || Number(booking.companions) || 0);
   bm.personTotal = Math.max(1, Number(pc) || 1);
   const mi = document.getElementById('bm-motif-input');
-  if (mi) mi.value = booking.motif || '';
+  if (mi) {
+    mi.value = booking.motif || '';
+    const mc = document.getElementById('bm-motif-count');
+    if (mc) mc.textContent = mi.value.length;
+  }
 
   // Pré-remplir la composition depuis tous les séjours chevauchant la période (admin)
   if (booking.reservationGroupId && typeof bookingsById !== 'undefined') {
